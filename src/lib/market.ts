@@ -269,7 +269,7 @@ export interface PolicyVerdict {
  * The only query parameter the route reads is `ownerSubject` (server.ts:597). Public: no bearer
  * token is attached, because a collection is a shopfront and a shopfront behind a login is not one.
  */
-export function listCollections(
+export async function listCollections(
   query: { ownerSubject?: string } = {},
   opts: RequestOptions = {},
 ): Promise<{ collections: readonly CollectionView[] }> {
@@ -296,7 +296,7 @@ export function listCollections(
  * `status ?? 'active'`, so an empty string becomes a status no row has and the browse page would
  * render as an empty market.
  */
-export function listListings(
+export async function listListings(
   query: {
     status?: ListingStatus
     assetKind?: AssetKind
@@ -328,7 +328,7 @@ export function listListings(
  *
  * Returns the listing AND its royalty split in basis points (server.ts:641-647). Public.
  */
-export function getListing(id: string, opts: RequestOptions = {}): Promise<ListingDetail> {
+export async function getListing(id: string, opts: RequestOptions = {}): Promise<ListingDetail> {
   return api(`/v1/listings/${encodeURIComponent(id)}`, { auth: false, ...opts })
 }
 
@@ -338,7 +338,7 @@ export function getListing(id: string, opts: RequestOptions = {}): Promise<Listi
  * FAILS OPEN by design: an unreachable indexer answers 200 with `indicatorsAvailable: false`
  * (server.ts:807-813), never a 5xx. A caller must read that flag; the status code says nothing.
  */
-export function getListingRisk(id: string, opts: RequestOptions = {}): Promise<RiskView> {
+export async function getListingRisk(id: string, opts: RequestOptions = {}): Promise<RiskView> {
   return api(`/v1/listings/${encodeURIComponent(id)}/risk`, { auth: false, ...opts })
 }
 
@@ -348,7 +348,7 @@ export function getListingRisk(id: string, opts: RequestOptions = {}): Promise<R
  * Public, and unauthenticated: who is bidding what is the auction. The route takes no query
  * parameters at all.
  */
-export function listBids(
+export async function listBids(
   listingId: string,
   opts: RequestOptions = {},
 ): Promise<{ bids: readonly BidView[] }> {
@@ -356,7 +356,7 @@ export function listBids(
 }
 
 /** `GET /v1/listings/:id/offers` — **`market/src/server.ts:893`**. Public; no query parameters. */
-export function listOffers(
+export async function listOffers(
   listingId: string,
   opts: RequestOptions = {},
 ): Promise<{ offers: readonly OfferView[] }> {
@@ -372,7 +372,7 @@ export function listOffers(
  * This function therefore sends one of exactly two strings and refuses anything else, rather than
  * letting a typo quietly return the wrong side of somebody's trades.
  */
-export function listOrders(
+export async function listOrders(
   query: { role: 'buyer' | 'seller' },
   opts: RequestOptions = {},
 ): Promise<{ orders: readonly OrderView[] }> {
@@ -389,7 +389,7 @@ export function listOrders(
  * (server.ts:986-989): "'Does not exist' and 'is not yours' are the same answer", because a
  * distinct 403 would be an oracle for who bought what.
  */
-export function getOrder(id: string, opts: RequestOptions = {}): Promise<{ order: OrderView }> {
+export async function getOrder(id: string, opts: RequestOptions = {}): Promise<{ order: OrderView }> {
   return api(`/v1/orders/${encodeURIComponent(id)}`, opts)
 }
 
@@ -403,7 +403,7 @@ export function getOrder(id: string, opts: RequestOptions = {}): Promise<{ order
  * Answers `{ verification: null }` for a subject nobody has reviewed — which is a different fact
  * from `unverified`, and the UI keeps them apart.
  */
-export function getVerification(
+export async function getVerification(
   subjectUrn: string,
   opts: RequestOptions = {},
 ): Promise<{ verification: VerificationView | null }> {
@@ -434,7 +434,7 @@ export interface Replayable {
  * Amounts cross as decimal STRINGS. `parseAmount` (money.ts:222) rejects anything else, so a
  * number here is a 400 and never a rounded price.
  */
-export function createListing(
+export async function createListing(
   key: string,
   body: {
     assetKind: AssetKind
@@ -481,7 +481,7 @@ export function createListing(
  * `escrow.ts` is where that distinction is turned into a sentence, and it is the exact conflation
  * that made every on-chain activation fail with a false diagnosis.
  */
-export function activateListing(
+export async function activateListing(
   key: string,
   id: string,
   body: { onchainEscrowTx?: string; chain?: string } = {},
@@ -505,7 +505,7 @@ export function activateListing(
  * cancels once. The key is still sent — it costs nothing and it is the one habit that keeps a
  * mutating call from ever going without one.
  */
-export function cancelListing(
+export async function cancelListing(
   key: string,
   id: string,
   opts: RequestOptions = {},
@@ -527,7 +527,7 @@ export function cancelListing(
  * looked at the request and said the money is not there. That is an answer about the customer's
  * balance, not a fault in this service." The UI says so.
  */
-export function buyListing(
+export async function buyListing(
   key: string,
   listingId: string,
   body: { amount: string },
@@ -552,7 +552,7 @@ export function buyListing(
  * A bid that does not beat the leader is a 409 `bid_too_low` carrying `minimum` as a string
  * (server.ts:413-427), so the UI can offer the next legal bid without a second round trip.
  */
-export function placeBid(
+export async function placeBid(
   key: string,
   listingId: string,
   body: { amount: string },
@@ -581,7 +581,7 @@ export function placeBid(
  * (server.ts:1348-1354) refuses anything that is not a valid ISO 8601 string, so an empty string
  * is a 400 — this client omits the field instead.
  */
-export function makeOffer(
+export async function makeOffer(
   key: string,
   listingId: string,
   body: { amount: string; expiresAt?: string },
@@ -604,7 +604,7 @@ export function makeOffer(
  * The offerer withdraws their own offer. `to: 'withdrawn'` is fixed by the service
  * (server.ts:922), not a body field, so nothing is sent.
  */
-export function withdrawOffer(
+export async function withdrawOffer(
   key: string,
   offerId: string,
   opts: RequestOptions = {},
@@ -624,7 +624,7 @@ export function withdrawOffer(
  * `amount` here would be sending a field that is ignored — and the fingerprint is taken over
  * `{ offerId }` only (server.ts:943), so it would not even change the idempotency behaviour.
  */
-export function acceptOffer(
+export async function acceptOffer(
   key: string,
   offerId: string,
   opts: RequestOptions = {},
@@ -647,7 +647,7 @@ export function acceptOffer(
  * Wrapped in `withIdempotentRoute` as of `market@4df8518`; before that a double-clicked button
  * opened TWO disputes on one order and froze the listing twice (server.ts:998-1003).
  */
-export function openDispute(
+export async function openDispute(
   key: string,
   orderId: string,
   body: { reason: string },
@@ -671,7 +671,7 @@ export function openDispute(
  * second collection. The key is sent anyway so that the day the service wraps it, this client is
  * already correct; today it is simply ignored.
  */
-export function createCollection(
+export async function createCollection(
   key: string,
   body: {
     slug: string

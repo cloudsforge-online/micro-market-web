@@ -1,181 +1,189 @@
-# cloudsforge-web-template
+# micro-market-web — Forge Market
 
-The skeleton every CloudsForge single-page application is instantiated from. It is a **working
-application**, not a scaffold: it boots, redeems an SSO hand-off, refreshes its own tokens,
-reports its own errors, renders four honest states and a page of charts, and passes its own CI.
-`cfctl new web <name>` copies it.
+The marketplace surface: browse and search listings, read one, create one, buy it, bid on it, make
+an offer, and follow an order through to its dispute.
 
-It exists because the estate has six frontends that each solved these problems separately, and
-the copies have already drifted: three chart implementations, six copies of one 261-line
-observability client, four spellings of "the request failed", and one SPA fallback that answers
-`200 OK` for every address that does not exist.
+It talks to exactly one service, `micro-market`, and to Nimbus for the session. Every price on it
+is a `bigint` of an asset's smallest units, and every fee and royalty is shown adding up to the
+sale price — because `market` proves that arithmetic exactly, and the screen should not be where it
+stops being true.
 
----
-
-## What you get
-
-| File | What it is |
-| --- | --- |
-| `src/main.tsx` | The boot sequence, in an order that is not arbitrary — telemetry, then the SSO hand-off, then render. Each step carries the reason it must precede the next. |
-| `src/lib/hosts.ts` | Where this app talks to, resolved at runtime from the browser's hostname. The only file that names the surface this app IS. |
-| `src/lib/api.ts` | Tokens, the single-flight refresh, one error shape, and the request id that reaches the screen. |
-| `src/lib/auth.tsx` | Session state for the tree, and `ProtectedRoute`. |
-| `src/lib/obs.ts` | Browser observability: uncaught errors, rejected promises, failed subresources and page-load timing, batched to Lantern. Replaces the copied 261-line client. |
-| `src/lib/resource.ts` | One fetch, four states. The loading/empty/failed/forbidden decision, made once as a pure function. |
-| `src/lib/series.ts` | Payload to chart data: labels in UTC, allocations sorted and folded, values to paths. |
-| `src/components/states.tsx` | The four states, as four visibly different things. |
-| `src/components/shell.tsx` | `CloudsForgeBar`, and a sub-nav docked at `var(--cf-bar-h)`. |
-| `src/pages/overview.tsx` | The example page. Delete it, keep its shape. |
-| `nginx.conf` | The SPA fallback that keeps its 404. |
-| `Dockerfile` | Two stages, non-root, no environment baked in, no toolchain in the final image. |
-| `.github/workflows/ci.yml` | Typecheck, tests, build, the estate rules as greps, and a Docker build. |
-
-Nothing in `@cloudsforge/ui` is reimplemented here: the bar, the switcher, the marks, the tokens,
-the chart primitives and `cloudsforgeHosts()` all come from the design system.
-
----
-
-## Running it
-
-```sh
-pnpm install
-pnpm dev                      # http://localhost:5180
 ```
-
-```sh
-pnpm typecheck && pnpm test && pnpm build
-```
-
-```sh
-# The `uipkg` context is temporary — see "The one temporary thing" below.
-docker build -t web-template --build-context uipkg=../ui --build-arg RELEASE="$(git rev-parse --short HEAD)" .
-docker run --rm -p 9310:8080 web-template
-
-curl -si localhost:9310/      | head -1   # HTTP/1.1 200 OK
-curl -si localhost:9310/nope  | head -1   # HTTP/1.1 404 Not Found  ← the point
+pnpm install          # after `pnpm --dir ../ui install`, which the link: specifier needs
+pnpm dev              # http://localhost:5187, talking to http://localhost:4007
+pnpm typecheck
+pnpm test             # 357 tests, node:test, no DOM
+pnpm build
 ```
 
 ---
 
-## Instantiating it
+## The one rule this repository exists to keep
 
-1. **Name the surface.** `PRODUCT` and `APP_NAME` in `src/lib/hosts.ts`, `data-cf-product` and
-   `data-cf-substrate` in `index.html`, and the `<title>`. `PRODUCT` is a registry key, so it
-   selects the accent, the switcher entry marked current and this app's API host in one move.
-2. **Rename the package.** `name` in `package.json`.
-3. **Delete the example domain.** `src/lib/overview.ts`, `src/pages/overview.tsx` and the sample
-   payload inside it. Everything else stays.
-4. **Add your routes**, in three places that must agree: the route table in `src/app.tsx`, `NAV`
-   in `src/components/shell.tsx`, and the enumerated locations in `nginx.conf`. The third is what
-   keeps an unknown path answering 404, and CI greps for the fallback that would break it.
-5. **Keep the four states.** A screen that renders three of them is a screen that reports a
-   timeout as "no data" or a missing scope as "try again".
-6. **Do not add a `.env` file.** There is a test that fails if one appears, and another that
-   fails if any source file reads a build-time variable.
+**Every call cites the line of `market/src/server.ts` it was verified against, and the tests assert
+the REQUEST rather than the response.**
 
----
+This estate has shipped seven clients written against a surface somebody imagined rather than the
+one the service registers — three of them inside `micro-market` itself. Two are written up in
+`docs/ecosystem/18-build-status.md` §3.3:
 
-## Decisions worth knowing before you change them
+- `micro-wallet` called `POST /v1/quotes`; `micro-pricing` serves `/rates`.
+- `micro-market` called `POST /v1/decisions/market.listing`; `micro-policy` has no `/v1` routes at
+  all. It was first reported as the moderation gate being *bypassed*. It was the opposite: the 404
+  landed on the `deny` branch and every listing creation returned 403. **The marketplace was not
+  unmoderated — it was closed.**
 
-**No build-time configuration, at all.** No `.env`, no `VITE_` variable, no `define`. Hosts come
-from `cloudsforgeHosts()`, which reads `window.location.hostname` on every call, so ONE image
-serves localhost, a preview deployment, staging and production. An image with an environment
-baked into it must be rebuilt to be promoted, which means the artefact that reaches production is
-not the artefact that passed CI. `test/no-build-time-config.test.ts` greps the source and fails if
-this comes back.
+Every suite involved was green, because a stubbed `fetch` answers whatever it is told to no matter
+what path it was asked for. So `test/market.test.ts` asserts the outgoing URL, method, query string,
+body and headers for every call in `src/lib/market.ts`, and CI greps for each cited line number.
 
-**An unknown path answers 404, not 200.** The usual `try_files $uri /index.html` serves the bundle
-with a 200 for every address in existence — which is why the site's "page not found" screen is
-delivered as a success today, indexed by crawlers and called healthy by monitors. `nginx.conf`
-enumerates the client routes instead and lets everything else fall through to
-`error_page 404 /index.html`, which serves the same shell while keeping the status. The price is
-one line per top-level route.
+### The routes this app calls
 
-**One refresh, however many 401s.** Ten requests firing on mount and all failing on an expired
-access token must produce ONE call to `/auth/refresh`. Refresh tokens rotate; ten parallel
-refreshes means nine of them present a token that has just been superseded, and a user holding a
-valid session is signed out. The slot is cleared when the promise settles, so the next expiry
-still refreshes.
+| Call | `market/src/server.ts` | Notes |
+| --- | --- | --- |
+| `GET /v1/collections` | 596 | Only `ownerSubject` is read (597). Public. |
+| `POST /v1/collections` | 602 | Not idempotency-wrapped by the service; the key is sent anyway. |
+| `GET /v1/listings` | 618 | Four parameters only. **No `limit`, no `q`.** Public. |
+| `GET /v1/listings/:id` | 636 | Returns the listing and its royalty split in bps. |
+| `POST /v1/listings` | 651 | `platformFeeBps` and `disputeWindowMs` are NOT body fields (701-702). |
+| `POST /v1/listings/:id/activate` | 742 | Fails **closed** on the chain index (756-763). |
+| `DELETE /v1/listings/:id` | 776 | No body: the reason is fixed by the service (782). |
+| `GET /v1/listings/:id/risk` | 790 | Fails **open**: read `indicatorsAvailable`, not the status. |
+| `POST /v1/listings/:id/buy` | 818 | `amount` only (829). |
+| `GET /v1/listings/:id/bids` | 846 | No parameters. Public. |
+| `POST /v1/listings/:id/bids` | 863 | A 409 carries `minimum` as a string (413-427). |
+| `GET /v1/listings/:id/offers` | 893 | No parameters. |
+| `POST /v1/listings/:id/offers` | 898 | `expiresAt` omitted rather than sent empty. |
+| `DELETE /v1/offers/:id` | 917 | Top-level, not under the listing. |
+| `POST /v1/offers/:id/accept` | 931 | **No body**: it settles at the offer's amount. |
+| `GET /v1/orders` | 969 | `role` only; the subject comes from the token (972). |
+| `GET /v1/orders/:id` | 980 | "Not yours" and "does not exist" are one 404 (986-989). |
+| `POST /v1/orders/:id/disputes` | 993 | `reason` only. Idempotency-wrapped since `4df8518`. |
+| `GET /v1/verifications/:urn` | 1106 | The URN is percent-encoded into one segment. |
 
-**The SSO code leaves the address bar before the exchange is sent.** `consumeAuthCallback()`
-strips `#cf_code` with `history.replaceState` and *then* posts it. Doing it afterwards leaves the
-code in the browser history, in the referrer of anything the page loads next, and in any
-screenshot taken while the request is in flight — and on the failure path, never strips it at all.
-The test asserts the ORDER, not just the outcome.
+**Every mutating route requires an `Idempotency-Key`** (1152-1157) matching `[A-Za-z0-9_:.-]{8,200}`
+(237). It is not optional. A replay answers **200 with `replayed: true`** rather than an error
+(1168-1173), and a client that translated that into a failure would tell a customer their completed
+purchase had broken.
 
-**A failed fetch shows its request id.** It is the one string a user can quote that finds their
-exact request across every service at once, so it is on screen, in monospace, selectable.
+### Routes this surface deliberately never calls
 
-**Forbidden is not failed.** A 403 was understood and refused; retrying cannot help, so that
-screen has no retry button. Offering one teaches people the app is unreliable.
-
-**Telemetry never throws, never reports itself, and is bounded.** A reporter that can break the
-page it measures is worse than none; a failed report that produces a report is an outage
-amplifier; and a component throwing on every frame must cost a fixed number of requests.
-
-**No chart library, and no pie.** The primitives are hand-rolled SVG in the design system,
-because a library arrives with its own palette, type scale and opinion about legends, and those
-are already decided. A pie asks a reader to compare angles, which they cannot do. There is no
-dual axis anywhere: two scales are two panels.
-
-**`link:` rather than `file:` for the design system.** pnpm *packs* a `file:` directory,
-honouring that package's `files` field — which lists only `dist` — so the installed copy would
-carry an exports map pointing at sources that were never packed. `link:` symlinks the working
-tree, which also means an edit in the design system is visible here without a republish.
+`GET /v1/disputes` (1015), the three moderation routes (1051, 1064, 1086), `PUT /v1/verifications`
+(1112) and `POST /v1/events` (515). All require an operator or a signed event. Calling one would be
+building a 403 into a page and then explaining it. A CI rule greps for them.
 
 ---
 
-## Tests
+## "We could not confirm" is not "not confirmed"
 
-`node:test`, no DOM. 65 tests across five files.
+`src/lib/escrow.ts` exists because the most recent defect in this estate made *every on-chain escrow
+activation* fail with a false diagnosis: an upstream that did not answer was reported as an upstream
+that answered no. The two need opposite remedies — wait, versus go and post the escrow.
 
-| File | What it pins |
-| --- | --- |
-| `test/api.test.ts` | Token storage and clearing, the memory fallback, ONE refresh for ten concurrent 401s, a new refresh after the previous settles, session expiry announced once, the request id on the error, 403 marked forbidden, and the auth callback — including that the code is stripped before the exchange is sent, and stripped even when the exchange fails. |
-| `test/hosts.test.ts` | Localhost to dev ports, apex derived from a product subdomain, an unknown prefix left alone, a surface that is a path on another surface, and same-origin versus cross-origin API bases. |
-| `test/series.test.ts` | Values to SVG paths, a flat series drawn down the middle rather than along the floor, a single point centred, an empty series yielding no path at all, UTC labels, allocations sorted and folded at eight, and the pricing stamp. |
-| `test/no-build-time-config.test.ts` | The grep: no `VITE_`, no build-time environment object, no `define`, no `envPrefix`, no `.env` file. |
-| `test/obs.test.ts` | The queue bound drops the oldest, and the envelope stamps the page. |
+`micro-market` is careful about it in three places, and this app is the fourth:
 
-**There is deliberately no jsdom.** It is a second browser implementation to keep current, it
-disagrees with real browsers in exactly the places that matter, and a test that renders a
-component in it proves the component renders in jsdom.
+| The service says | Meaning | What this app renders |
+| --- | --- | --- |
+| **503 `indexer_unavailable`** (467-475) | The chain index did not answer. | "We could not confirm the on-chain escrow… **This is not a statement that your escrow is missing — it is a statement that we do not know.**" A `role="status"` notice with a dashed border. |
+| **409 `state_conflict`** with the escrow message (762) | The index answered: not confirmed. | "The chain index answered, and the escrow transaction is not confirmed yet. Once it has enough confirmations, activate again." A `role="alert"`. |
+| `ApiError` status 0 | We never reached the service. | "Nothing was checked and nothing was changed." |
 
-### What is untested here because it needs a browser
+`escrowIsUnknown` and `escrowIsUnconfirmed` are **separate booleans**, so a careless `!confirmed`
+cannot collapse them again. `test/escrow.test.ts` asserts both directions on every branch, including
+that the two are never both set for any input, and that the unknown copy never contains the phrase
+"not confirmed".
 
-Each of these is exercised by a Beacon journey against the deployed app, which is a real browser
-rather than an approximation of one:
+The same distinction one level out: `GET /v1/listings/:id/risk` fails open and answers 200 with
+`indicatorsAvailable: false` when the chain cannot be read (801-804). The panel says "we could not
+read the chain for this item — that is not the same as finding none", which is a different sentence
+from "we read it and none of the six applied".
 
-- **Rendering.** Every component in `src/components` and `src/pages`. The pure layer they call is
-  tested; the markup they produce is not.
-- **`ProtectedRoute` and `AuthProvider`.** The redirect on an anonymous session, the return-URL
-  round trip through the Account portal, and the `cf:auth-expired` listener dropping the session.
-  The functions they call are tested; the effects that call them are not.
-- **The observability listeners.** `window.onerror`, `unhandledrejection`, the subresource-error
-  path, `PerformanceNavigationTiming`, `sendBeacon` on `pagehide`, and the `visibilitychange`
-  flush. `envelope` and the queue bound are tested; the listeners are not.
-- **`localStorage` throwing.** The memory fallback is tested by removing storage; the Safari
-  private-window and blocked-iframe cases, where access itself throws, are not reproducible here.
-- **Everything visual.** Token application, the sub-nav docking under `var(--cf-bar-h)`, chart
-  geometry as drawn, contrast, and focus order.
-- **nginx.** The 404-preserving fallback is verified by `curl` against the built image, and by the
-  grep in CI. It is not covered by `pnpm test`.
+And on a listing itself: `escrowed` on the wire is `escrowId !== null || onchainEscrowTx !== null`
+(1200). It says a reference EXISTS. The only sound inference about the chain is the one the
+service's fail-closed rule licenses — an on-chain listing reached `active` only by passing
+`escrowStatus().confirmed` — and it is worded as a past observation: *"That was checked when it was
+activated, not just now."*
 
 ---
+
+## An escrow is a reservation, not a balance
+
+`market/src/escrow.ts:1-13` — `hold_entry_id` is the journal entry that moved value from `available`
+to `reserved`. Market never adds anything up. So no screen here says Forge Market is holding your
+funds; it says there is a reservation in Forge Ledger and Market holds the reference to it.
+
+## Money is `bigint`, and the parts are shown adding up
+
+`src/lib/money.ts` is a port of `market/src/money.ts`: the fee and the royalty round **down**, the
+seller's proceeds are the **remainder**, and the royalty is divided between recipients by largest
+remainder so the shares sum to it exactly. `checkPartition` returns the problem as a sentence rather
+than throwing, so the breakdown component can render the sum row **and** say when it does not
+balance — instead of blanking the page and taking the request id the user needs with it.
+
+There is no `Number()`, no `parseFloat` and no `toFixed` anywhere near an amount, and CI greps for
+the last two. A `TOKEN:` asset's decimals are unknown to this bundle, so its amounts are rendered in
+smallest units and **labelled as such** rather than guessed at eighteen.
+
+## Auctions have a clock, and a leading bid is not a price
+
+A late bid extends the close time (`bids.ts:250-261`), so the clock says so. An auction whose close
+has passed but whose listing is still `active` is **"closing"**, not closed — `market` settles
+auctions by a sweep. `untilLabel` answers `null` rather than "0 min", so a closed auction can never
+read as live. And the reserve is off the wire on purpose (1190-1191) and checked at close, so the
+leading bid is labelled a leading bid, every time, with the caveat beside it.
+
+---
+
+## Behaviour this estate insists on
+
+1. **Every figure carries its observation time.** `src/lib/format.ts` answers `null` for a missing
+   instant and no caller substitutes "just now".
+2. **Never invent a number.** An unpriced listing sorts *last* in both directions — it is not a
+   price of zero. A missing amount renders as `Not set`, italic, never as `0`.
+3. **Degradation, not blank pages.** The four reads on a listing page are independent resources; one
+   failing names itself and leaves the rest.
+4. **No build-time config.** Hosts come from `cloudsforgeHosts()` at runtime; there is no `.env` and
+   `test/no-build-time-config.test.ts` fails the build if `VITE_` ever appears.
+5. **Honest 404.** `nginx.conf` enumerates the real routes and serves everything else through
+   `error_page 404 /index.html`, keeping the status.
+6. **Accessible.** Real contrast on the warm ash ground, keyboard navigable, and never colour alone
+   for state — every badge is a glyph, a word and a colour, and the *unknown* badge is a different
+   shape from both the positive and the negative one.
+
+## Search is honest about its scope
+
+`micro-market` has no text-search route and the browse route passes no limit, so the answer is
+capped at 50 (`listings.ts:702`). The search box filters what that request returned, and the line
+under it says so — because a filter that silently searches a fraction of the catalogue is how a
+buyer concludes an item is not for sale.
+
+## Layout
+
+```
+src/lib/market.ts       every request, each citing server.ts:<line>
+src/lib/escrow.ts       known / unknown / unconfirmed, kept apart
+src/lib/money.ts        bigint arithmetic and rendering, ported from the service
+src/lib/breakdown.ts    the rows a reader sees, with their sum
+src/lib/auction.ts      the clock, the floor, and what a leading bid is not
+src/lib/search.ts       client-side filtering, and the sentence that admits it
+src/lib/routes.ts       the addresses, declared once
+src/pages/              browse · listing · sell · orders · collections · fees
+test/                   357 tests; every one asserts a request, a number, or a refusal
+```
 
 ## The one temporary thing
 
-`@cloudsforge/ui` is consumed as `link:../ui/packages/ui` because it is not published yet. Three
-places carry that, and all three are marked:
+`@cloudsforge/ui` is consumed as `link:../ui/packages/ui` because it is not published. When it is,
+the specifier becomes `^1.0.0` and three things go with it: the `uipkg` build context in the
+`Dockerfile`, the second checkout in `.github/workflows/ci.yml`, and the two local jobs that exist
+only because the reusable workflow cannot resolve a sibling that is not there.
 
-- `package.json` — the `link:` specifier
-- `Dockerfile` — the `uipkg` named build context, and the copy of the design system's
-  `tsconfig.base.json` that esbuild needs to transform its sources
-- `.github/workflows/ci.yml` — the second checkout, and the sibling directory layout
+## Docker
 
-When the package is published, all three become a registry version and nothing else in this
-repository changes.
+```
+docker build -t market-web --build-context uipkg=../ui .
+docker run --rm -p 55630:8080 market-web
+```
 
-The whole of `.github/workflows/ci.yml` is likewise temporary: it is replaced by a call to
-`cloudsforge/.github/.github/workflows/web-ci.yml`, and the target for repositories with a
-bespoke CI file is zero.
+The image carries no environment. It is built once and the same tag is promoted; the hosts it talks
+to are resolved in the browser from the address the page was served on.
