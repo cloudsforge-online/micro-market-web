@@ -1,0 +1,53 @@
+<!doctype html>
+<!--
+  data-cf-product picks the accent ramp and data-cf-substrate the ash ramp, both from
+  @cloudsforge/ui/tokens.css. They are on <html> and set STATICALLY here rather than by React,
+  because a page that paints before the attributes land flashes the default ember and then
+  changes colour.
+
+  `market` selects #9b7bf0 (ui/packages/ui/src/surfaces.ts:233). `warm` selects the ash ramp,
+  whose --cf-ash-900 is the near-black warm ground the market brand assets were drawn against
+  (brand/MANIFEST.json:117 names it #12100f). The ground is a TOKEN, never a hex written here: a
+  literal would stop following the substrate the day the substrate moves.
+-->
+<html lang="en-GB" data-cf-product="market" data-cf-substrate="warm">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="colour-scheme" content="dark light" />
+    <!--
+      The build that produced this bundle. Stamped by the Dockerfile, read by src/lib/obs.ts, and
+      the reason an error report can be pinned to the deploy that introduced it. It is an identity
+      rather than a configuration: it names the artefact, it does not tell it where it is running.
+    -->
+    <meta name="cf-release" content="dev" />
+    <!--
+      Forge Market's own chrome, from micro-brand's `assets/market/`. Four frontends shipped with
+      the browser's blank-page glyph in the tab and a bare URL wherever they were shared, because
+      nothing asserted that a page has an icon. test/brand-chrome.test.ts fails in BOTH directions
+      now: a required icon missing from public/, and an icon linked here that is not there.
+    -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/favicon-512x512.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/favicon-192x192.png" />
+
+    <title>Forge Market</title>
+
+    <!-- Relative on purpose: one bundle serves localhost, preview and the apex, and this file
+         names no hostname. Crawlers resolve it against the page they fetched. An absolute URL
+         here would bake a hostname into the artefact — the same defect as build-time config. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Forge Market" />
+    <meta
+      property="og:description"
+      content="Discover, list, offer and settle. Every price in its own asset, and every fee and royalty shown adding up to it exactly."
+    />
+    <meta property="og:image" content="/og-1200x630.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,176 @@
+# The whole of this file is temporary, exactly as it is in the service template: it is replaced
+# by a call to cloudsforge-online/micro-org/.github/workflows/web-ci.yml, and the target for
+# repositories with a bespoke CI file is zero. The second checkout below is the reason it still
+# exists — @cloudsforge/ui is consumed from a sibling directory until it is published.
+#
+# THE REPOSITORY IN THAT CHECKOUT MUST BE THE REAL ONE. It said `cloudsforge/ui`, which is a
+# different organisation AND a different repository name from the design system's actual home,
+# `cloudsforge-online/micro-ui`. Neither the `build` job nor the `image` job can survive that: the
+# checkout fails, so `pnpm install --frozen-lockfile` has no sibling directory for the
+# `link:../ui/packages/ui` specifier to resolve against, and the Docker build has no `uipkg`
+# context to name. Both jobs failed on the pristine template, on every push, and every frontend cut
+# from it started life with a red pipeline it had to fix locally before it could do anything else —
+# which is exactly how a wrong value survives upstream while every consumer quietly works around it.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: web-template
+
+      # Temporary: the sibling layout the `link:` dependency resolves against.
+      - uses: actions/checkout@v4
+        with:
+          repository: cloudsforge-online/micro-ui
+          path: ui
+          # micro-ui is private; without a contents:read token this checkout 404s and the job
+          # dies before install. Same wiring as the service repos' runtime checkout.
+          token: ${{ secrets.ESTATE_READ_TOKEN }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web-template/pnpm-lock.yaml
+
+      # `link:` resolves to the sibling's own node_modules, so the design system must be
+      # installed before this repository is — without this, `tsc` cannot resolve ../ui's own
+      # imports (react, react/jsx-runtime) when it typechecks the linked sources.
+      - name: Install the sibling design system
+        run: pnpm --dir ui install --frozen-lockfile
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: web-template
+
+      - run: pnpm typecheck
+        working-directory: web-template
+
+      - run: pnpm test
+        working-directory: web-template
+
+      - run: pnpm build
+        working-directory: web-template
+
+  rules:
+    # The estate rules that are cheaper to grep than to review. Each one has been broken at least
+    # once by a change that looked correct in isolation.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: No build-time configuration
+        # The same rule as test/no-build-time-config.test.ts, checked again here so it fails even
+        # if somebody deletes the test along with the line it forbids.
+        run: |
+          if grep -rn --include='*.ts' --include='*.tsx' --include='*.html' \
+               -e 'import\.meta\.env' -e 'VITE_' src index.html; then
+            echo "::error::this bundle must read no build-time environment; hosts come from cloudsforgeHosts() at runtime"
+            exit 1
+          fi
+
+      - name: No hard-coded CloudsForge hostname
+        # A literal hostname is a second, unversioned copy of the surface registry, and the copy
+        # is the one that will be wrong.
+        run: |
+          if grep -rn --include='*.ts' --include='*.tsx' 'cloudsforge\.online' src; then
+            echo "::error::resolve hosts through cloudsforgeHosts() rather than naming them"
+            exit 1
+          fi
+
+      - name: The SPA fallback keeps its 404
+        # `try_files ... /index.html` in the catch-all location is how an app starts answering 200
+        # for every address that does not exist.
+        #
+        # Comments are stripped before the check. nginx.conf's own header quotes the forbidden
+        # directive while explaining why it is forbidden, so the unstripped grep matched the
+        # documentation and this step failed on a pristine template — every frontend cut from it
+        # would have started life with a red pipeline over a line of prose. A guard that fires on
+        # its own rationale trains people to disable the guard.
+        run: |
+          sed 's/#.*//' nginx.conf > /tmp/nginx.effective
+          if grep -nE 'try_files\s+\$uri\s+(\$uri/\s+)?/index\.html' /tmp/nginx.effective; then
+            echo "::error::unknown paths must 404; serve the shell through error_page 404 /index.html"
+            exit 1
+          fi
+          grep -q 'error_page 404 /index.html' /tmp/nginx.effective
+
+      - name: The auth callback is redeemed before the app renders
+        run: grep -q 'bootstrapSession' src/main.tsx
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: web-template
+      - uses: actions/checkout@v4
+        with:
+          repository: cloudsforge-online/micro-ui
+          path: ui
+          # micro-ui is private; without a contents:read token this checkout 404s and the job
+          # dies before install. Same wiring as the service repos' runtime checkout.
+          token: ${{ secrets.ESTATE_READ_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+      - name: Build the image
+        uses: docker/build-push-action@v6
+        with:
+          context: web-template
+          build-contexts: uipkg=ui
+          build-args: RELEASE=${{ github.sha }}
+          push: false
+          load: true
+          tags: web-template:ci
+
+      # PROBED, NOT READ. Both defects this step guards were invisible in the config and obvious in
+      # a response: nginx's `add_header` is all-or-nothing per level, so a location that sets
+      # Cache-Control silently loses every inherited security header; and `try_files` is a file
+      # lookup rather than an internal redirect, so serving /index.html from `location = /` never
+      # enters `location = /index.html`. Reading the file suggests both are fine. Curling it does
+      # not.
+      - name: The served headers are the ones the config appears to promise
+        working-directory: web-template
+        run: |
+          set -uo pipefail
+          docker run -d --rm --name wt-ci -p 127.0.0.1:8099:8080 web-template:ci
+          for _ in $(seq 1 30); do curl -fsS -o /dev/null http://127.0.0.1:8099/ && break; sleep 1; done
+
+          fail=0
+          check() { # url, header, expected-substring, label
+            got=$(curl -sI "$1" | tr -d '\r' | grep -i "^$2:" | cut -d' ' -f2- || true)
+            case "${got:-}" in
+              "") echo "::error::$4 is missing $2"; fail=1 ;;
+              *"$3"*) echo "  ok   $4: $2: $got" ;;
+              *) echo "::error::$4 is missing or wrong for $2 (got '${got:-nothing}', wanted '$3')"; fail=1 ;;
+            esac
+          }
+
+          asset=$(curl -s http://127.0.0.1:8099/ | grep -oE '/assets/[^"]+\.js' | head -1)
+          for h in X-Content-Type-Options X-Frame-Options Referrer-Policy; do
+            check "http://127.0.0.1:8099/" "$h" "" "the shell"
+            [ -n "$asset" ] && check "http://127.0.0.1:8099$asset" "$h" "" "a hashed asset"
+          done
+          check "http://127.0.0.1:8099/" Cache-Control "no-store" "the shell"
+          [ -n "$asset" ] && check "http://127.0.0.1:8099$asset" Cache-Control "immutable" "a hashed asset"
+
+          # And the honest 404 the whole config exists to preserve.
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8099/nope/not/a/route)
+          [ "$code" = "404" ] || { echo "::error::an unknown path returned $code, not 404"; fail=1; }
+
+          docker rm -f wt-ci >/dev/null 2>&1 || true
+          exit $fail
