@@ -19,7 +19,13 @@ import { Amount, Breakdown, MaybeAmount } from '../components/money.tsx'
 import { Badge, EscrowPanel, ModerationNotice, RiskPanel, VerificationBadge } from '../components/status.tsx'
 import { Failed, Forbidden, Loading } from '../components/states.tsx'
 import { noticeFor, type ErrorNotice } from '../lib/api.ts'
-import { auctionClock, bidFloor, leadingBid, LEADING_BID_CAVEAT, LEADING_BID_LABEL } from '../lib/auction.ts'
+import {
+  LEADING_BID_CAVEAT,
+  LEADING_BID_LABEL,
+  auctionClock,
+  bidFloorFrom,
+  leadingBid,
+} from '../lib/auction.ts'
 import { previewBreakdown } from '../lib/breakdown.ts'
 import { escrowKnowledge, riskKnowledge } from '../lib/escrow.ts'
 import {
@@ -474,9 +480,9 @@ function BidForm({
   const [result, setResult] = useState<ActionResult>({ kind: 'none' })
   const [busy, setBusy] = useState(false)
 
-  const floor = bidFloor(listing, leaderAmount === null ? [] : [
-    { id: 'leader', bidderSubject: '', amount: leaderAmount.toString(), assetCode: listing.assetCode, status: 'leading', placedAt: '' },
-  ])
+  // The floor is computed the way the service computes it — `bids.ts:203` — so the form offers the
+  // minimum the service will actually accept rather than one it would refuse.
+  const floor = bidFloorFrom(listing, leaderAmount)
 
   const submit = async () => {
     setBusy(true)

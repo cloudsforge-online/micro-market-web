@@ -186,12 +186,25 @@ jobs:
         # `parseFloat` or `toFixed` near an amount loses the bottom of an 18-decimal value — and
         # every amount on this surface is a bigint of smallest units, where the bottom is exactly
         # where a fee and a royalty land.
+        #
+        # COMMENTS ARE STRIPPED FIRST, and that is not a convenience. The naive version of this
+        # step failed on its first run against correct code: `src/lib/money.ts` DOCUMENTS the two
+        # functions it forbids ("There is no `Number()`, no `parseFloat` and no `toFixed` anywhere
+        # in this file"), so a grep over the raw source matched the file's own explanation of the
+        # rule. Exactly the trap `nginx.conf`'s header describes, and the estate has now hit it
+        # twice. A guard that fails on correct code is a guard somebody deletes.
         run: |
           set -uo pipefail
-          if grep -rn --include='*.ts' --include='*.tsx' -e 'parseFloat' -e 'toFixed' src; then
-            echo "::error::amounts are bigint end to end; see src/lib/money.ts"
-            exit 1
-          fi
+          sources=$(find src -name '*.ts' -o -name '*.tsx')
+          hits=0
+          for file in $sources; do
+            stripped=$(sed -e 's|//.*$||' -e 's|^[[:space:]]*\*.*$||' -e 's|/\*.*\*/||' "$file")
+            if printf '%s\n' "$stripped" | grep -nE 'parseFloat|toFixed' ; then
+              echo "::error file=${file}::amounts are bigint end to end; see src/lib/money.ts"
+              hits=1
+            fi
+          done
+          [ "$hits" = "0" ] || exit 1
           echo "ok: no float arithmetic near an amount"
 
       - name: An unknown escrow is never rendered as an unconfirmed one

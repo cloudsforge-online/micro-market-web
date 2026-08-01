@@ -117,7 +117,17 @@ export interface BidFloor {
  */
 export function bidFloor(listing: ListingView, bids: readonly BidView[]): BidFloor {
   const leader = leadingBid(bids)
-  const leaderAmount = leader === null ? null : parseAmountOrNull(leader.amount)
+  return bidFloorFrom(listing, leader === null ? null : parseAmountOrNull(leader.amount))
+}
+
+/**
+ * The same, when the caller already holds the leading amount.
+ *
+ * Separate rather than made to take a synthesised `BidView`: a component that had to build a fake
+ * bid in order to ask a question about a real one is a component that will eventually get one of
+ * the fake fields wrong and pass it somewhere that matters.
+ */
+export function bidFloorFrom(listing: ListingView, leaderAmount: bigint | null): BidFloor {
   const starting = parseAmountOrNull(listing.price) ?? 1n
   return {
     minimum: minimumBid(leaderAmount, starting),
