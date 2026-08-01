@@ -25,7 +25,7 @@ body {
   margin: 0;
   background: var(--cf-bg);
   color: var(--cf-fg);
-  font-family: var(--cf-font, system-ui, sans-serif);
+  font-family: var(--cf-font-sans);
   /* The bar is dark on every surface; the page follows the substrate. */
   color-scheme: dark;
 }

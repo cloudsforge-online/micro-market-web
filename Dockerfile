@@ -32,6 +32,11 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 COPY tsconfig.json vite.config.ts index.html ./
+# The favicons and the og card live in public/ and Vite copies that directory into dist/
+# verbatim. Without this line the built image has NO favicon at all, while brand-chrome.test.ts
+# goes on passing because it reads the source tree, not the image. Four frontends shipped that
+# way. The container probe in web-ci.yml now asks the running image for /favicon-32x32.png.
+COPY public ./public
 COPY src ./src
 
 # The release identity: the git sha, stamped into the meta tag src/lib/obs.ts reads, so an error
