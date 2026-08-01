@@ -348,6 +348,15 @@ describe('formatMoney — the unit is never optional', () => {
     assert.equal(formatMoney(5n, 'DOGE').exactUnits, false)
   })
 
+  it('keeps the sign on an unknown asset: a reversal must not read as a credit', () => {
+    assert.equal(formatMoney(-1234n, 'TOKEN:0xabc').text, '-1,234')
+    assert.equal(formatMoney(-1234n, 'SHARD').text, '-1,234')
+  })
+
+  it('groups an unknown asset’s smallest units, so a long integer stays scannable', () => {
+    assert.equal(formatMoney(1_234_567n, 'TOKEN:0xabc').text, '1,234,567')
+  })
+
   it('formatWireMoney answers null for an unreadable amount rather than zero', () => {
     assert.equal(formatWireMoney(null, 'SHARD'), null)
     assert.equal(formatWireMoney('not-a-number', 'SHARD'), null)

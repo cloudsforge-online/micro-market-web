@@ -826,6 +826,12 @@ body {
   max-width: 34rem;
 }
 
+/* The empty state's one job is to offer the thing to DO next, so its action gets real room. The
+   template shipped this element with no rule at all, in every frontend cut from it. */
+.mk-state__action {
+  margin-top: 0.5rem;
+}
+
 .mk-state--empty {
   border: 1px dashed var(--cf-line-strong);
   color: var(--cf-fg-dim);

@@ -314,8 +314,10 @@ export interface RenderedAmount {
  */
 export function formatMoney(amount: bigint, assetCode: string): RenderedAmount {
   const decimals = ASSET_DECIMALS[assetCode]
+  // `formatUnits(_, 0)` is the smallest-unit rendering, and it keeps the sign. Doing the grouping
+  // by hand here would have dropped a minus, which turns a reversal into a credit on screen.
   if (decimals === undefined) {
-    return { text: group(amount < 0n ? -amount : amount), assetCode, exactUnits: false }
+    return { text: formatUnits(amount, 0), assetCode, exactUnits: false }
   }
   return { text: formatUnits(amount, decimals), assetCode, exactUnits: true }
 }

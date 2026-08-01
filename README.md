@@ -12,7 +12,7 @@ stops being true.
 pnpm install          # after `pnpm --dir ../ui install`, which the link: specifier needs
 pnpm dev              # http://localhost:5187, talking to http://localhost:4007
 pnpm typecheck
-pnpm test             # 357 tests, node:test, no DOM
+pnpm test             # 359 tests, node:test, no DOM
 pnpm build
 ```
 
@@ -168,7 +168,7 @@ src/lib/auction.ts      the clock, the floor, and what a leading bid is not
 src/lib/search.ts       client-side filtering, and the sentence that admits it
 src/lib/routes.ts       the addresses, declared once
 src/pages/              browse · listing · sell · orders · collections · fees
-test/                   357 tests; every one asserts a request, a number, or a refusal
+test/                   359 tests; every one asserts a request, a number, or a refusal
 ```
 
 ## The one temporary thing
