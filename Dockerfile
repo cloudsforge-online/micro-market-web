@@ -12,7 +12,7 @@
 # The named context is the unpublished @cloudsforge/ui workspace, mirroring the `file:` specifier
 # in package.json. It disappears when the package is published; see "The one temporary thing" in
 # the README.
-#   docker build -t web-template --build-context uipkg=../ui .
+#   docker build -t market-web --build-context uipkg=../ui .
 
 FROM node:22-alpine AS build
 WORKDIR /app

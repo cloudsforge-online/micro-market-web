@@ -28,6 +28,6 @@ export default defineConfig({
     // that is only safe when every rebuild produces a new filename.
     sourcemap: true,
   },
-  server: { port: 5180 },
-  preview: { port: 5180 },
+  server: { port: 5187 },
+  preview: { port: 5187 },
 })

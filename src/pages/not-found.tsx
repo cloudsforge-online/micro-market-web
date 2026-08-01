@@ -11,18 +11,18 @@ import { Link } from 'react-router-dom'
 
 export function NotFoundPage() {
   return (
-    <div className="wt-state wt-state--empty" role="status">
-      <span className="wt-state__icon" aria-hidden="true">
+    <div className="mk-state mk-state--empty" role="status">
+      <span className="mk-state__icon" aria-hidden="true">
         ◇
       </span>
-      <p className="wt-state__title">There is no page at this address</p>
-      <p className="wt-state__hint">
+      <p className="mk-state__title">There is no page at this address</p>
+      <p className="mk-state__hint">
         The link may be out of date, or the page may have moved. This response carries a 404
         status, so whatever sent you here can be fixed.
       </p>
-      <div className="wt-state__action">
+      <div className="mk-state__action">
         <Link className="cf-btn" to="/">
-          Back to the overview
+          Back to the listings
         </Link>
       </div>
     </div>

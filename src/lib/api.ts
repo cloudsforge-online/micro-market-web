@@ -91,13 +91,24 @@ export class ApiError extends Error {
    * at once — which is why every failure state in this app displays it.
    */
   readonly requestId: string | undefined
+  /**
+   * The parsed error body, when there was one.
+   *
+   * Kept because this estate's errors carry MORE than a sentence: a `bid_too_low` from
+   * `micro-market` includes `minimum` as a decimal string (`market/src/server.ts:413-427`) "so a
+   * client can re-bid without a second round trip and without guessing". Discarding the body
+   * would leave a UI scraping that number back out of English prose, which is how a bidder is
+   * shown a minimum that is off by a digit.
+   */
+  readonly body: unknown
 
-  constructor(status: number, message: string, code?: string, requestId?: string) {
+  constructor(status: number, message: string, code?: string, requestId?: string, body?: unknown) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.code = code
     this.requestId = requestId
+    this.body = body
   }
 }
 
@@ -335,8 +346,10 @@ async function request<T>(base: string, path: string, opts: RequestOptions = {})
     let requestId = res.headers.get('x-request-id') ?? undefined
     let message = res.statusText || `Request failed (${res.status})`
     let code: string | undefined
+    let raw: unknown
     try {
-      const parsed = readErrorBody(await res.json())
+      raw = await res.json()
+      const parsed = readErrorBody(raw)
       if (parsed.message) message = parsed.message
       if (parsed.code) code = parsed.code
       if (parsed.requestId) requestId = parsed.requestId
@@ -355,7 +368,7 @@ async function request<T>(base: string, path: string, opts: RequestOptions = {})
       })
     }
     if (res.status === 401 && auth) expireSession()
-    throw new ApiError(res.status, message, code, requestId)
+    throw new ApiError(res.status, message, code, requestId, raw)
   }
 
   if (res.status === 204 || res.headers.get('content-length') === '0') return undefined as T

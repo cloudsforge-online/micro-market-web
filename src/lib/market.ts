@@ -32,7 +32,7 @@
  *    completed purchase gets reported to a customer as a broken one.
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  */
-import { api, type RequestOptions } from './api.ts'
+import { ApiError, api, type RequestOptions } from './api.ts'
 import { idempotentHeaders } from './idempotency.ts'
 
 /* ------------------------------------------------------------------ the domain, as it is sent */
@@ -687,6 +687,31 @@ export function createCollection(
     body,
     ...opts,
   })
+}
+
+/**
+ * The `minimum` a `bid_too_low` refusal carries.
+ *
+ * `market/src/server.ts:413-427` answers a bid that does not beat the leader with a 409 whose body
+ * is `{ error: { code: 'bid_too_low', message, minimum, requestId } }`, where `minimum` is "a
+ * string: an amount is never a JSON number". It is there so a client can offer the next legal bid
+ * without a second round trip.
+ *
+ * Read from the parsed body rather than scraped out of the sentence. A regular expression over
+ * English prose would find whichever number happened to be first, and a bidder shown a wrong
+ * minimum types it and is refused again — with no way to tell that the app, not the auction, was
+ * the problem.
+ *
+ * `null` when the field is absent or is not a decimal string. Missing is missing.
+ */
+export function bidMinimum(err: unknown): string | null {
+  if (!(err instanceof ApiError) || err.code !== 'bid_too_low') return null
+  const body = err.body
+  if (typeof body !== 'object' || body === null) return null
+  const envelope = (body as { error?: unknown }).error
+  if (typeof envelope !== 'object' || envelope === null) return null
+  const minimum = (envelope as { minimum?: unknown }).minimum
+  return typeof minimum === 'string' && /^\d{1,78}$/.test(minimum) ? minimum : null
 }
 
 /* ------------------------------------------------------------------ what this surface cannot do */

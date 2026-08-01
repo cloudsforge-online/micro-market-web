@@ -1,0 +1,873 @@
+/**
+ * Forge Market's own layer, on top of @cloudsforge/ui.
+ *
+ * Everything here is prefixed `mk-` so that nothing in this file can collide with, or quietly
+ * override, a `cf-` class from the design system. Every colour, space and font is a TOKEN: a
+ * literal hex here is a colour that will not follow the substrate, and the market ground
+ * (#12100f in the brand assets) is `--cf-ash-900` under `data-cf-substrate="warm"` — written
+ * once, in index.html, as an attribute rather than a value.
+ *
+ * ── Contrast ─────────────────────────────────────────────────────────────────────────────────
+ *
+ * Body text is `--cf-fg` (#ece5d6) on `--cf-bg` (#0e0c0a): about 15:1. Dimmed text is
+ * `--cf-fg-dim` (#b7ae9b) at about 9:1, and `--cf-fg-mute` (#8e866f) at about 5.4:1 — used for
+ * labels and stamps, never for a sentence carrying a fact. The accent (#9b7bf0) is about 5.9:1 on
+ * the ground, which clears AA for body text; it is nonetheless never the only channel for a
+ * state, because a reader who cannot separate it from the ember still needs to know which badge
+ * they are looking at.
+ */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--cf-bg);
+  color: var(--cf-fg);
+  font-family: var(--cf-font, system-ui, sans-serif);
+  /* The bar is dark on every surface; the page follows the substrate. */
+  color-scheme: dark;
+}
+
+/* The skip link is invisible until it has focus, and then it is unmissable. A keyboard reader
+   arriving on a page of fifty cards should not have to tab through all of them. */
+.mk-skip {
+  position: absolute;
+  left: -9999px;
+  z-index: 100;
+  padding: 0.6rem 1rem;
+  background: var(--cf-bg-raised);
+  color: var(--cf-fg);
+  border-radius: 0 0 8px 0;
+}
+
+.mk-skip:focus {
+  left: 0;
+  top: 0;
+  outline: 2px solid var(--cf-accent);
+}
+
+/* ----------------------------- sub-nav ----------------------------- */
+
+/*
+ * Docked at exactly the bar's height. `--cf-bar-h` is the token the bar itself is sized with, so
+ * the two cannot drift; a copied `46px` would leave a seam the day the bar changes.
+ */
+.mk-subnav {
+  position: sticky;
+  top: var(--cf-bar-h);
+  z-index: 40;
+  background: var(--cf-bg-raised);
+  border-bottom: 1px solid var(--cf-line);
+}
+
+.mk-subnav__inner {
+  display: flex;
+  gap: 0.25rem;
+  align-items: stretch;
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.mk-wordmark {
+  display: inline-flex;
+  align-items: center;
+  padding-right: 1rem;
+  margin-right: 0.5rem;
+  border-right: 1px solid var(--cf-line);
+  color: var(--cf-fg-dim);
+  font-size: 0.875rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.mk-wordmark b {
+  color: var(--cf-fg);
+  font-weight: 600;
+  margin-left: 0.3ch;
+}
+
+.mk-subnav__link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.7rem 0.85rem;
+  color: var(--cf-fg-dim);
+  text-decoration: none;
+  font-size: 0.875rem;
+  /* The active marker is a 2px underline in the accent, and the LABEL also changes weight and
+     colour: colour is never the only channel. */
+  border-bottom: 2px solid transparent;
+}
+
+.mk-subnav__link:hover {
+  color: var(--cf-fg);
+  background: var(--cf-surface-hover);
+}
+
+.mk-subnav__link.is-active {
+  color: var(--cf-fg);
+  font-weight: 600;
+  border-bottom-color: var(--cf-accent);
+}
+
+.mk-subnav__link:focus-visible {
+  outline: 2px solid var(--cf-accent);
+  outline-offset: -2px;
+}
+
+/* ------------------------------ page ------------------------------- */
+
+.mk-main {
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem;
+}
+
+.mk-page__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.mk-page__title {
+  margin: 0;
+  font-size: 1.45rem;
+  letter-spacing: -0.01em;
+}
+
+.mk-page__title--urn {
+  font-size: 1.1rem;
+  word-break: break-all;
+}
+
+.mk-page__lede {
+  margin: 0.4rem 0 0;
+  max-width: 46rem;
+  color: var(--cf-fg-dim);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.mk-eyebrow {
+  margin: 0;
+  color: var(--cf-accent);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mk-page__badges {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.mk-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 60rem) {
+  .mk-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.mk-panel {
+  background: var(--cf-surface-solid);
+  border: 1px solid var(--cf-line);
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.mk-panel--action {
+  border-color: var(--cf-line-strong);
+}
+
+.mk-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.mk-panel__title {
+  margin: 0 0 0.6rem;
+  font-size: 0.95rem;
+  color: var(--cf-fg);
+  font-weight: 600;
+}
+
+.mk-panel__head .mk-panel__title {
+  margin: 0;
+}
+
+.mk-panel__body {
+  margin: 0 0 0.6rem;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--cf-fg-dim);
+}
+
+.mk-note {
+  color: var(--cf-fg-mute);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  margin: 0.5rem 0 0;
+}
+
+.mk-note--strong {
+  color: var(--cf-fg-dim);
+}
+
+.mk-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--cf-fg-dim);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.mk-scope {
+  margin: 0 0 0.9rem;
+  color: var(--cf-fg-dim);
+  font-size: 0.85rem;
+}
+
+/* ------------------------------ filters ---------------------------- */
+
+.mk-filters {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+}
+
+.mk-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.mk-form__row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-bottom: 0.5rem;
+}
+
+.mk-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 12rem;
+  flex: 1 1 12rem;
+}
+
+.mk-field__label {
+  font-size: 0.78rem;
+  color: var(--cf-fg-mute);
+}
+
+.mk-input {
+  background: var(--cf-bg-sunken);
+  color: var(--cf-fg);
+  border: 1px solid var(--cf-line-strong);
+  border-radius: 8px;
+  padding: 0.5rem 0.6rem;
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.mk-input--area {
+  resize: vertical;
+  font-family: inherit;
+}
+
+.mk-input:focus-visible {
+  outline: 2px solid var(--cf-accent);
+  outline-offset: 1px;
+}
+
+.mk-toggle {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.mk-toggle .cf-btn.is-active {
+  border-color: var(--cf-accent);
+  color: var(--cf-fg);
+  font-weight: 600;
+}
+
+/* ------------------------------- cards ----------------------------- */
+
+.mk-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: 0.75rem;
+}
+
+.mk-card {
+  background: var(--cf-surface-solid);
+  border: 1px solid var(--cf-line);
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mk-card__link {
+  color: inherit;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.mk-card__link:hover .mk-card__urn,
+.mk-card__link:hover .mk-card__title {
+  color: var(--cf-accent);
+}
+
+.mk-card__link:focus-visible {
+  outline: 2px solid var(--cf-accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.mk-card__kind {
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cf-fg-mute);
+}
+
+.mk-card__urn {
+  font-size: 0.82rem;
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+.mk-card__title {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.mk-card__body {
+  margin: 0;
+  color: var(--cf-fg-dim);
+  font-size: 0.85rem;
+}
+
+.mk-card__price {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.mk-card__price-label {
+  font-size: 0.72rem;
+  color: var(--cf-fg-mute);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mk-card__tags {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.mk-card__clock,
+.mk-card__stamp {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--cf-fg-mute);
+}
+
+.mk-card__clock {
+  color: var(--cf-fg-dim);
+}
+
+/* ------------------------------- rows ------------------------------ */
+
+.mk-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.mk-rows__row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--cf-line);
+  font-size: 0.88rem;
+}
+
+.mk-rows__row:last-child {
+  border-bottom: none;
+}
+
+.mk-rows__row > a {
+  flex: 1 1 16rem;
+  word-break: break-all;
+  color: var(--cf-accent);
+}
+
+.mk-rows__when {
+  color: var(--cf-fg-mute);
+  font-size: 0.8rem;
+  margin-left: auto;
+}
+
+.mk-draft {
+  border: 1px solid var(--cf-line);
+  border-radius: 8px;
+  padding: 0.8rem 0.9rem;
+  margin-bottom: 0.6rem;
+}
+
+.mk-draft__head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.4rem;
+}
+
+.mk-draft__head > a {
+  color: var(--cf-accent);
+  word-break: break-all;
+}
+
+/* ------------------------------ amounts ---------------------------- */
+
+.mk-amount {
+  white-space: nowrap;
+}
+
+.mk-amount__value {
+  font-weight: 600;
+  /* Tabular figures so a column of prices lines up on the decimal point. */
+  font-variant-numeric: tabular-nums;
+}
+
+.mk-amount__code {
+  color: var(--cf-fg-dim);
+  font-size: 0.85em;
+}
+
+/* Said out loud, not implied: this number is in the asset's smallest units because this bundle
+   does not know its decimals. */
+.mk-amount__note {
+  color: var(--cf-warn, var(--cf-fg-mute));
+  font-size: 0.72em;
+  white-space: normal;
+}
+
+/* Missing is missing. Italic and dimmed, and never a zero. */
+.mk-absent {
+  color: var(--cf-fg-mute);
+  font-style: italic;
+}
+
+.mk-stamp {
+  color: var(--cf-fg-mute);
+  font-size: 0.8rem;
+}
+
+.mk-countdown {
+  color: var(--cf-accent);
+}
+
+/* ------------------------------- tables ---------------------------- */
+
+.mk-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.mk-table__caption {
+  caption-side: top;
+  text-align: left;
+  color: var(--cf-fg-mute);
+  font-size: 0.78rem;
+  padding-bottom: 0.4rem;
+}
+
+.mk-table th,
+.mk-table td {
+  text-align: left;
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--cf-line);
+  font-weight: 400;
+}
+
+.mk-table thead th {
+  color: var(--cf-fg-mute);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mk-table__num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.mk-table__rate {
+  color: var(--cf-fg-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.mk-table__row--nested th {
+  padding-left: 1.4rem;
+  color: var(--cf-fg-dim);
+}
+
+.mk-table__branch {
+  color: var(--cf-fg-mute);
+}
+
+/* The sum row is the assertion, drawn as one: a rule above it and the accent on the figure. */
+.mk-table__sum th,
+.mk-table__sum td {
+  border-top: 2px solid var(--cf-line-strong);
+  font-weight: 600;
+}
+
+.mk-table tfoot th,
+.mk-table tfoot td {
+  border-bottom: none;
+}
+
+.mk-breakdown__ok {
+  margin: 0.6rem 0 0;
+  font-size: 0.82rem;
+  color: var(--cf-fg-dim);
+  line-height: 1.5;
+}
+
+.mk-breakdown__problem {
+  margin: 0.6rem 0 0;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--cf-danger, #d2543a);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--cf-fg);
+  line-height: 1.5;
+}
+
+.mk-facts {
+  display: grid;
+  grid-template-columns: minmax(8rem, auto) 1fr;
+  gap: 0.4rem 1rem;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.mk-facts dt {
+  color: var(--cf-fg-mute);
+}
+
+.mk-facts dd {
+  margin: 0;
+}
+
+.mk-facts--mono dd {
+  font-family: var(--cf-font-mono, ui-monospace, monospace);
+  font-size: 0.82rem;
+  word-break: break-all;
+}
+
+.mk-offers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mk-offers__row {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--cf-line);
+  font-size: 0.85rem;
+}
+
+.mk-offers__who {
+  color: var(--cf-fg-dim);
+  font-size: 0.8rem;
+}
+
+.mk-offers__when {
+  margin-left: auto;
+  color: var(--cf-fg-mute);
+  font-size: 0.78rem;
+}
+
+/* ------------------------------- badges ---------------------------- */
+
+/*
+ * A badge is a glyph, a word and a colour, in that order of importance. The `unknown` variant is
+ * DASHED and carries a `?` — a different shape from both the positive and the negative badge,
+ * because the whole point is that it is neither.
+ */
+.mk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--cf-line-strong);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  color: var(--cf-fg-dim);
+}
+
+.mk-badge__glyph {
+  font-weight: 700;
+}
+
+.mk-badge--good {
+  border-color: color-mix(in srgb, var(--cf-accent) 55%, transparent);
+  color: var(--cf-fg);
+}
+
+.mk-badge--good .mk-badge__glyph {
+  color: var(--cf-accent);
+}
+
+.mk-badge--warn {
+  border-color: var(--cf-warn, #f4a63c);
+  color: var(--cf-fg);
+}
+
+.mk-badge--warn .mk-badge__glyph {
+  color: var(--cf-warn, #f4a63c);
+}
+
+.mk-badge--unknown {
+  border-style: dashed;
+  color: var(--cf-fg-dim);
+}
+
+.mk-badge--neutral {
+  color: var(--cf-fg-dim);
+}
+
+/* ------------------------------ notices ---------------------------- */
+
+.mk-notice {
+  border: 1px solid var(--cf-line-strong);
+  border-radius: 8px;
+  padding: 0.7rem 0.85rem;
+  margin: 0.75rem 0 0;
+}
+
+.mk-notice__title {
+  margin: 0 0 0.3rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.mk-notice__body {
+  margin: 0 0 0.4rem;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--cf-fg-dim);
+}
+
+.mk-notice__meta {
+  margin: 0.3rem 0 0;
+  font-size: 0.8rem;
+  color: var(--cf-fg-mute);
+}
+
+.mk-notice--ok {
+  border-color: color-mix(in srgb, var(--cf-accent) 50%, transparent);
+}
+
+.mk-notice--error {
+  border-color: var(--cf-danger, #d2543a);
+}
+
+.mk-notice--frozen {
+  border-color: var(--cf-warn, #f4a63c);
+  margin: 0 0 1rem;
+}
+
+/* Dashed, like the unknown badge, and for the same reason: it is not a failure. */
+.mk-notice--unknown {
+  border-style: dashed;
+}
+
+.mk-reqid {
+  user-select: all;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: var(--cf-bg-sunken);
+  font-family: var(--cf-font-mono, ui-monospace, monospace);
+}
+
+/* ---------------------------- indicators --------------------------- */
+
+.mk-indicators {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mk-indicator {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--cf-fg-dim);
+}
+
+.mk-indicator.is-present {
+  color: var(--cf-fg);
+}
+
+.mk-indicator__glyph {
+  color: var(--cf-fg-mute);
+  font-weight: 700;
+}
+
+.mk-indicator.is-present .mk-indicator__glyph {
+  color: var(--cf-warn, #f4a63c);
+}
+
+.mk-indicator__state {
+  font-weight: 600;
+}
+
+.mk-indicator__detail {
+  color: var(--cf-fg-mute);
+  font-size: 0.8rem;
+}
+
+/* ------------------------------ footer ----------------------------- */
+
+.mk-footer {
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+  border-top: 1px solid var(--cf-line);
+  color: var(--cf-fg-mute);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.mk-footer p {
+  margin: 0;
+  max-width: 52rem;
+}
+
+/* ------------------------- the four states ------------------------- */
+
+/*
+ * Loading, empty, failed and forbidden differ in SHAPE and WORDS as well as colour: a reader who
+ * cannot separate two hues still has two other channels telling them which of the four they are
+ * looking at.
+ */
+.mk-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+  padding: 3rem 1rem;
+  border-radius: 10px;
+}
+
+.mk-state__icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.mk-state__title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.mk-state__hint,
+.mk-state__meta {
+  margin: 0;
+  color: var(--cf-fg-dim);
+  font-size: 0.875rem;
+  max-width: 34rem;
+}
+
+.mk-state--empty {
+  border: 1px dashed var(--cf-line-strong);
+  color: var(--cf-fg-dim);
+}
+
+.mk-state--failed {
+  border: 1px solid var(--cf-danger, #d2543a);
+}
+
+.mk-state--failed .mk-state__icon,
+.mk-state--forbidden .mk-state__icon {
+  color: var(--cf-danger, #d2543a);
+}
+
+.mk-state--forbidden {
+  border: 1px solid var(--cf-line-strong);
+  background: var(--cf-bg-sunken);
+}
+
+.mk-reqid,
+.mk-state .mk-reqid {
+  user-select: all;
+}
+
+.mk-spinner {
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  border: 2px solid var(--cf-line-strong);
+  border-top-color: var(--cf-accent);
+  animation: mk-spin 0.7s linear infinite;
+}
+
+@keyframes mk-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* A spinner is decoration; a reader who asked for less motion gets a static ring. */
+@media (prefers-reduced-motion: reduce) {
+  .mk-spinner {
+    animation: none;
+  }
+}
