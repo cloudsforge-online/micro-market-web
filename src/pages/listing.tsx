@@ -527,7 +527,7 @@ function BidForm({
         <label className="mk-field">
           <span className="mk-field__label">Your bid, in smallest units of {listing.assetCode}</span>
           <input
-            className="mk-input cf-num"
+            className="cf-input cf-num"
             inputMode="numeric"
             value={amount}
             placeholder={floor.minimum.toString()}
@@ -583,7 +583,7 @@ function OfferForm({ listing, onChanged }: { listing: ListingView; onChanged: ()
         <label className="mk-field">
           <span className="mk-field__label">Your offer, in smallest units of {listing.assetCode}</span>
           <input
-            className="mk-input cf-num"
+            className="cf-input cf-num"
             inputMode="numeric"
             value={amount}
             onChange={(event) => setAmount(event.target.value)}
@@ -592,7 +592,7 @@ function OfferForm({ listing, onChanged }: { listing: ListingView; onChanged: ()
         <label className="mk-field">
           <span className="mk-field__label">Expires (optional)</span>
           <input
-            className="mk-input"
+            className="cf-input"
             type="datetime-local"
             value={expires}
             onChange={(event) => setExpires(event.target.value)}

@@ -187,7 +187,7 @@ function DraftRow({ listing, onActivated }: { listing: ListingView; onActivated:
           <label className="mk-field">
             <span className="mk-field__label">Escrow transaction</span>
             <input
-              className="mk-input cf-num"
+              className="cf-input cf-num"
               value={tx}
               placeholder="0x…"
               onChange={(event) => setTx(event.target.value)}
@@ -195,7 +195,7 @@ function DraftRow({ listing, onActivated }: { listing: ListingView; onActivated:
           </label>
           <label className="mk-field">
             <span className="mk-field__label">Chain</span>
-            <input className="mk-input" value={chain} onChange={(event) => setChain(event.target.value)} />
+            <input className="cf-input" value={chain} onChange={(event) => setChain(event.target.value)} />
           </label>
         </div>
       )}
@@ -327,7 +327,7 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
         <label className="mk-field">
           <span className="mk-field__label">Item URN</span>
           <input
-            className="mk-input cf-num"
+            className="cf-input cf-num"
             value={itemUrn}
             placeholder="cf:worlds:item:…"
             onChange={(event) => setItemUrn(event.target.value)}
@@ -335,7 +335,7 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
         </label>
         <label className="mk-field">
           <span className="mk-field__label">Kind</span>
-          <select className="mk-input" value={assetKind} onChange={(e) => setAssetKind(e.target.value as AssetKind)}>
+          <select className="cf-input" value={assetKind} onChange={(e) => setAssetKind(e.target.value as AssetKind)}>
             {ASSET_KINDS.map((kind) => (
               <option key={kind} value={kind}>
                 {ASSET_KIND_COPY[kind] ?? kind}
@@ -346,7 +346,7 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
         <label className="mk-field">
           <span className="mk-field__label">How it sells</span>
           <select
-            className="mk-input"
+            className="cf-input"
             value={pricingMode}
             onChange={(e) => setPricingMode(e.target.value as PricingMode)}
           >
@@ -360,7 +360,7 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
         <label className="mk-field">
           <span className="mk-field__label">Where it settles</span>
           <select
-            className="mk-input"
+            className="cf-input"
             value={settlementMode}
             onChange={(e) => setSettlementMode(e.target.value as SettlementMode)}
           >
@@ -376,7 +376,7 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
             {pricingMode === 'auction' ? 'Starting price' : 'Price'}, in smallest units
           </span>
           <input
-            className="mk-input cf-num"
+            className="cf-input cf-num"
             inputMode="numeric"
             value={price}
             disabled={pricingMode === 'offers_only'}
@@ -385,16 +385,16 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
         </label>
         <label className="mk-field">
           <span className="mk-field__label">Priced in</span>
-          <input className="mk-input" value={assetCode} onChange={(e) => setAssetCode(e.target.value)} />
+          <input className="cf-input" value={assetCode} onChange={(e) => setAssetCode(e.target.value)} />
         </label>
         <label className="mk-field">
           <span className="mk-field__label">The item's own asset code</span>
-          <input className="mk-input" value={itemAssetCode} onChange={(e) => setItemAssetCode(e.target.value)} />
+          <input className="cf-input" value={itemAssetCode} onChange={(e) => setItemAssetCode(e.target.value)} />
         </label>
         <label className="mk-field">
           <span className="mk-field__label">Quantity</span>
           <input
-            className="mk-input cf-num"
+            className="cf-input cf-num"
             inputMode="numeric"
             value={quantity}
             onChange={(event) => setQuantity(event.target.value)}
@@ -403,7 +403,7 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
         <label className="mk-field">
           <span className="mk-field__label">Royalty, in basis points</span>
           <input
-            className="mk-input cf-num"
+            className="cf-input cf-num"
             inputMode="numeric"
             value={royaltyBps}
             onChange={(event) => setRoyaltyBps(event.target.value)}
@@ -413,7 +413,7 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
           <label className="mk-field">
             <span className="mk-field__label">Royalty goes to</span>
             <input
-              className="mk-input cf-num"
+              className="cf-input cf-num"
               value={royaltySubject}
               placeholder="user:…"
               onChange={(event) => setRoyaltySubject(event.target.value)}

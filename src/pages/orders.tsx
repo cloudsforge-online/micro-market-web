@@ -288,7 +288,7 @@ function DisputePanel({ order }: { order: OrderView }) {
           <label className="mk-field">
             <span className="mk-field__label">What is wrong</span>
             <textarea
-              className="mk-input mk-input--area"
+              className="cf-input mk-area"
               rows={3}
               value={reason}
               onChange={(event) => setReason(event.target.value)}

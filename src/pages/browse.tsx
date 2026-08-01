@@ -65,7 +65,7 @@ export function BrowsePage() {
         <label className="mk-field">
           <span className="mk-field__label">Filter these listings</span>
           <input
-            className="mk-input"
+            className="cf-input"
             type="search"
             value={query}
             placeholder="An item URN, an asset code…"
@@ -75,7 +75,7 @@ export function BrowsePage() {
         <label className="mk-field">
           <span className="mk-field__label">Kind</span>
           <select
-            className="mk-input"
+            className="cf-input"
             value={assetKind}
             onChange={(event) => setAssetKind(event.target.value as AssetKind | '')}
           >
@@ -90,7 +90,7 @@ export function BrowsePage() {
         <label className="mk-field">
           <span className="mk-field__label">Order</span>
           <select
-            className="mk-input"
+            className="cf-input"
             value={sort}
             onChange={(event) => setSort(event.target.value as SortKey)}
           >

@@ -281,25 +281,12 @@ body {
   color: var(--cf-fg-mute);
 }
 
-.mk-input {
-  background: var(--cf-bg-sunken);
-  color: var(--cf-fg);
-  border: 1px solid var(--cf-line-strong);
-  border-radius: 8px;
-  padding: 0.5rem 0.6rem;
-  font: inherit;
-  font-size: 0.9rem;
-}
 
-.mk-input--area {
+.mk-area {
   resize: vertical;
   font-family: inherit;
 }
 
-.mk-input:focus-visible {
-  outline: 2px solid var(--cf-accent);
-  outline-offset: 1px;
-}
 
 .mk-toggle {
   display: flex;
