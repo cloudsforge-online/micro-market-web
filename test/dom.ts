@@ -453,28 +453,16 @@ export async function mount(element: ReactElement, options: MountOptions = {}): 
   const { createRoot } = await import('react-dom/client')
   const { act } = React as unknown as { act: (fn: () => Promise<void> | void) => Promise<void> }
 
-  /**
-   * `globalThis.React`, for the linked design system only.
-   *
-   * `@cloudsforge/ui` publishes `src/index.tsx` as its entry point rather than a build
-   * (`ui/packages/ui/package.json` — `"exports": { ".": "./src/index.tsx" }`, with the compiled
-   * `dist` reserved for `publishConfig`). Consuming it through `link:` therefore hands its raw
-   * TSX to THIS repository's loader, and `node --import tsx` applies this repository's tsconfig,
-   * whose `include` is `["src", "test", "vite.config.ts"]` — the design system's sources match
-   * none of those, so esbuild falls back to the CLASSIC JSX transform and emits
-   * `React.createElement` into a module that imports no React. Every component of the shared
-   * chrome then throws `ReferenceError: React is not defined` on first render.
-   *
-   * `vite build` is unaffected — its esbuild is configured with the automatic runtime for every
-   * file it sees, which is why CI is green today and why this only appears under the test loader.
-   *
-   * Defining the global is the smallest fix that does not require editing `micro-ui` (held by
-   * another agent) or widening this repository's tsconfig to typecheck a dependency's sources. It
-   * is restored on unmount. Reported upward: the day `@cloudsforge/ui` is published and the
-   * specifier becomes `^1.0.0`, `dist` is what resolves and this disappears on its own.
-   */
-  saved.set('React', Object.getOwnPropertyDescriptor(g, 'React'))
-  Object.defineProperty(g, 'React', { configurable: true, writable: true, value: React })
+  // There was a `globalThis.React` here, and it is gone. It existed because `@cloudsforge/ui`
+  // named `src/index.tsx` as its entry point, so `link:` handed its raw TSX to THIS repository's
+  // loader, which compiled it under a tsconfig that did not `include` it and therefore fell back
+  // to the CLASSIC JSX transform — `React.createElement` emitted into a module importing no
+  // React. The entry points now name a committed `dist` (`ui/packages/ui/package.json`), so the
+  // design system arrives already compiled with the automatic runtime and reaches for no global.
+  //
+  // The OTHER workaround did not go with it. Two copies of React is a property of `link:` plus
+  // Node's realpath resolution, not of the entry point, and it is handled by
+  // `--import @cloudsforge/ui/test-loader` in the `test` script.
 
   const host = doc.createElement('div')
   doc.body.appendChild(host)
@@ -657,7 +645,7 @@ export async function mount(element: ReactElement, options: MountOptions = {}): 
       console.error = realError
       console.warn = realWarn
       globalThis.fetch = realFetch
-      for (const key of [...GLOBALS, 'React']) {
+      for (const key of GLOBALS) {
         const descriptor = saved.get(key)
         if (descriptor) Object.defineProperty(g, key, descriptor)
         else delete g[key]
