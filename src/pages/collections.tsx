@@ -121,10 +121,19 @@ function CollectionDetail({ id }: { id: string }) {
           <p className="mk-eyebrow">Collection</p>
           <h1 className="mk-page__title">{collection?.name ?? 'This collection'}</h1>
           {collection === null ? (
+            // `collections.data` is null for the whole of the first request, so reading it
+            // directly said "we could not read this" at first paint for EVERY collection, every
+            // time, including the ones that arrived a moment later. A read IN FLIGHT is not a read
+            // that failed, and `resource.ts` already knows the difference — the bug was reaching
+            // past `state` to `data`. The three cases are now three sentences.
             <p className="mk-page__lede">
-              {/* Degradation with a name on it: we are showing the listings, and we could not name
-                  the collection. Saying so beats a heading that reads as the collection's name. */}
-              We could not read this collection's own details. Its listings are below.
+              {collections.state === 'loading'
+                ? 'Reading this collection’s details…'
+                : collections.state === 'failed'
+                  ? // Degradation with a name on it: we are showing the listings, and we could not
+                    // name the collection. Saying so beats a heading that reads as its name.
+                    'We could not read this collection’s own details. Its listings are below.'
+                  : 'No collection on this market has this address. Anything listed against it is below.'}
             </p>
           ) : (
             <p className="mk-page__lede">

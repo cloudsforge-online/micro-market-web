@@ -38,15 +38,18 @@ RUN = [
     "@cloudsforge/ui/test-loader",
     "--test",
     "test/double-submit.test.ts",
+    "test/outage.test.ts",
     "test/journeys.test.ts",
 ]
 
 SOURCES = [
     "src/lib/submit.ts",
     "src/lib/intent.ts",
+    "src/lib/resource.ts",
     "src/pages/listing.tsx",
     "src/pages/sell.tsx",
     "src/pages/orders.tsx",
+    "src/pages/collections.tsx",
 ]
 
 
@@ -150,6 +153,37 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "src/pages/orders.tsx",
         "            disabled={busy || reason.trim() === ''}\n",
         "",
+    ),
+    # ── failure outranks emptiness ────────────────────────────────────────────────────────────
+    (
+        "listing: a failed bids read reports as no bids",
+        "src/pages/listing.tsx",
+        "  const bidsFailed = bids.state === 'failed'",
+        "  const bidsFailed = false",
+    ),
+    (
+        "listing: the money-split panel stops distinguishing an outage from an empty auction",
+        "src/pages/listing.tsx",
+        "{listing.pricingMode === 'auction' && bidsFailed ? (",
+        "{false ? (",
+    ),
+    (
+        "listing: the bid form states a floor computed from bids it could not read",
+        "src/pages/listing.tsx",
+        "      {bidsFailed ? (",
+        "      {false ? (",
+    ),
+    (
+        "resource: emptiness outranks failure",
+        "src/lib/resource.ts",
+        "  if (opts.error) return opts.error.forbidden ? 'forbidden' : 'failed'\n  if (opts.loading) return 'loading'",
+        "  if (opts.loading) return 'loading'\n  if (opts.error) return opts.error.forbidden ? 'forbidden' : 'failed'",
+    ),
+    (
+        "collections: a read in flight reports as a read that failed",
+        "src/pages/collections.tsx",
+        "              {collections.state === 'loading'\n                ? 'Reading this collection’s details…'\n                : collections.state === 'failed'",
+        "              {false\n                ? 'Reading this collection’s details…'\n                : true",
     ),
 ]
 

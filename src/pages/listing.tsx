@@ -125,6 +125,12 @@ function ListingBody({ detail, onChanged }: { detail: ListingDetail; onChanged: 
   const loadOffers = useCallback((signal: AbortSignal) => listOffers(listing.id, { signal }), [listing.id])
   const offers = useResource(loadOffers, () => 1, 'The offers did not load.')
 
+  // `?? []` is the shape `src/lib/resource.ts:14-20` warns about — "reporting 'nothing here' for a
+  // timeout is how an outage reads as a quiet week" — so the failure travels alongside it. Nothing
+  // downstream may read this empty array without also reading `bidsFailed`: an auction whose bids
+  // did not load has an UNKNOWN leader, not no leader, and the two lead to different sentences and
+  // to a different bid floor.
+  const bidsFailed = bids.state === 'failed'
   const allBids = bids.data?.bids ?? []
   const leader = leadingBid(allBids)
   const leaderAmount = leader === null ? null : parseAmountOrNull(leader.amount)
@@ -207,12 +213,23 @@ function ListingBody({ detail, onChanged }: { detail: ListingDetail; onChanged: 
           {preview === null ? (
             <section className="mk-panel">
               <h2 className="mk-panel__title">Where the money would go</h2>
-              <p className="mk-panel__body">
-                There is no price to split yet.{' '}
-                {listing.pricingMode === 'auction'
-                  ? 'Once there is a bid, this shows exactly how that amount divides.'
-                  : 'An offer sets the amount, and the split is taken from that.'}
-              </p>
+              {listing.pricingMode === 'auction' && bidsFailed ? (
+                // Not "there is no price to split yet". We did not read the bids, so we do not
+                // know whether there is one — and "once there is a bid" would be this page
+                // asserting the auction is empty on the strength of a request that failed.
+                <p className="mk-panel__body">
+                  We could not read the bids on this listing, so there is no amount here to divide.
+                  There may well be a leading bid; this is a fault in reading them, not a statement
+                  that the auction is empty.
+                </p>
+              ) : (
+                <p className="mk-panel__body">
+                  There is no price to split yet.{' '}
+                  {listing.pricingMode === 'auction'
+                    ? 'Once there is a bid, this shows exactly how that amount divides.'
+                    : 'An offer sets the amount, and the split is taken from that.'}
+                </p>
+              )}
             </section>
           ) : (
             <section className="mk-panel">
@@ -232,7 +249,12 @@ function ListingBody({ detail, onChanged }: { detail: ListingDetail; onChanged: 
             </section>
           )}
 
-          <ActionPanel listing={listing} leaderAmount={leaderAmount} onChanged={onChanged} />
+          <ActionPanel
+            listing={listing}
+            leaderAmount={leaderAmount}
+            bidsFailed={bidsFailed}
+            onChanged={onChanged}
+          />
         </div>
 
         <aside className="mk-columns__side">
@@ -389,10 +411,13 @@ type ActionResult =
 function ActionPanel({
   listing,
   leaderAmount,
+  bidsFailed,
   onChanged,
 }: {
   listing: ListingView
   leaderAmount: bigint | null
+  /** The bids read failed, so `leaderAmount === null` means UNKNOWN rather than "no bids". */
+  bidsFailed: boolean
   onChanged: () => void
 }) {
   if (listing.frozen) {
@@ -417,7 +442,14 @@ function ActionPanel({
     )
   }
   if (listing.pricingMode === 'auction') {
-    return <BidForm listing={listing} leaderAmount={leaderAmount} onChanged={onChanged} />
+    return (
+      <BidForm
+        listing={listing}
+        leaderAmount={leaderAmount}
+        bidsFailed={bidsFailed}
+        onChanged={onChanged}
+      />
+    )
   }
   return (
     <>
@@ -490,10 +522,12 @@ function BuyForm({ listing, onChanged }: { listing: ListingView; onChanged: () =
 function BidForm({
   listing,
   leaderAmount,
+  bidsFailed,
   onChanged,
 }: {
   listing: ListingView
   leaderAmount: bigint | null
+  bidsFailed: boolean
   onChanged: () => void
 }) {
   const intent = useIntent('bid')
@@ -537,11 +571,30 @@ function BidForm({
   return (
     <section className="mk-panel mk-panel--action">
       <h2 className="mk-panel__title">Place a bid</h2>
-      <p className="mk-panel__body">
-        The smallest bid this auction will take is{' '}
-        <Amount value={floor.minimum} assetCode={listing.assetCode} />
-        {floor.basis === 'above_leader' ? ' — one unit above the leader.' : ' — the starting price.'}
-      </p>
+      {bidsFailed ? (
+        // The floor is `minimumBid(leader ?? null, startingPrice)`, and we could not read the
+        // leader. Stating the starting price as "the smallest bid this auction will take" would
+        // send a bidder straight into a `bid_too_low` 409 with a figure this page invented from an
+        // empty array that a 500 produced. So the starting price is named as what it is, and the
+        // unknown is named as an unknown.
+        <p className="mk-panel__body">
+          We could not read the bids on this listing, so we cannot tell you the smallest bid it
+          will take. The starting price is{' '}
+          <MaybeAmount
+            value={parseAmountOrNull(listing.price)}
+            assetCode={listing.assetCode}
+            absent="not set"
+          />
+          ; if somebody is already leading, the floor is one unit above them. Bid what you mean to
+          bid — a bid below the floor is refused and the refusal carries the exact figure.
+        </p>
+      ) : (
+        <p className="mk-panel__body">
+          The smallest bid this auction will take is{' '}
+          <Amount value={floor.minimum} assetCode={listing.assetCode} />
+          {floor.basis === 'above_leader' ? ' — one unit above the leader.' : ' — the starting price.'}
+        </p>
+      )}
       <div className="mk-form__row">
         <label className="mk-field">
           <span className="mk-field__label">Your bid, in smallest units of {listing.assetCode}</span>
@@ -549,7 +602,10 @@ function BidForm({
             className="cf-input cf-num"
             inputMode="numeric"
             value={amount}
-            placeholder={floor.minimum.toString()}
+            // No placeholder when the bids did not load: a greyed-out figure in the field is a
+            // suggestion, and suggesting the starting price to somebody who may be bidding against
+            // a leader we could not see is the same wrong number in a quieter voice.
+            placeholder={bidsFailed ? '' : floor.minimum.toString()}
             onChange={(event) => setAmount(event.target.value)}
           />
         </label>
