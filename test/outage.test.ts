@@ -117,6 +117,14 @@ describe('a failed bids read is never rendered as “there are no bids”', () =
           /once there is a bid/i,
           '"once there is a bid" asserts there is not one; the request that would have said so failed',
         )
+        // And the leading-bid row itself, which has said this correctly since it was written.
+        // Asserted here so the three sentences that depend on `bidsFailed` fail together rather
+        // than one of them being quietly reverted.
+        assert.doesNotMatch(
+          s.text(),
+          /no bids yet/i,
+          'the leading-bid row rendered a 500 as "No bids yet"',
+        )
       },
     )
   })

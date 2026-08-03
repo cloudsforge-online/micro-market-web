@@ -170,8 +170,14 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
     (
         "listing: the bid form states a floor computed from bids it could not read",
         "src/pages/listing.tsx",
-        "      {bidsFailed ? (",
-        "      {false ? (",
+        "      {bidsFailed ? (\n        // The floor is `minimumBid(leader ?? null, startingPrice)`",
+        "      {false ? (\n        // The floor is `minimumBid(leader ?? null, startingPrice)`",
+    ),
+    (
+        "listing: the leading-bid row shows a failed read as “No bids yet”",
+        "src/pages/listing.tsx",
+        "          {bidsFailed ? (\n            <span className=\"mk-absent\">Not loaded",
+        "          {false ? (\n            <span className=\"mk-absent\">Not loaded",
     ),
     (
         "resource: emptiness outranks failure",
