@@ -1,5 +1,11 @@
 # micro-market-web — Forge Market
 
+[![ci](https://github.com/cloudsforge-online/micro-market-web/actions/workflows/ci.yml/badge.svg)](https://github.com/cloudsforge-online/micro-market-web/actions/workflows/ci.yml)
+![node](https://img.shields.io/badge/node-%3E%3D22-5FA04E?logo=node.js&logoColor=white)
+![typescript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
+![module](https://img.shields.io/badge/module-ESM-F7DF1E?logo=javascript&logoColor=black)
+![tests](https://img.shields.io/badge/tests-in--process%20DOM-6E56CF)
+
 The marketplace surface: browse and search listings, read one, create one, buy it, bid on it, make
 an offer, and follow an order through to its dispute.
 
@@ -187,3 +193,10 @@ docker run --rm -p 55630:8080 market-web
 
 The image carries no environment. It is built once and the same tag is promoted; the hosts it talks
 to are resolved in the browser from the address the page was served on.
+
+---
+
+## Provenance
+
+The code in this repository was written by **Claude Opus 5** and **Claude Fable 5**, assets
+generated with **FLUX 2 Pro**, under human direction and review.
