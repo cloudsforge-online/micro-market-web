@@ -65,6 +65,7 @@ import { AuthProvider } from '../src/lib/auth.tsx'
 import { ListingPage } from '../src/pages/listing.tsx'
 import { OrdersPage } from '../src/pages/orders.tsx'
 import { SellPage } from '../src/pages/sell.tsx'
+import { useSubmit } from '../src/lib/submit.ts'
 
 const ORIGIN = 'https://market.cloudsforge.online'
 
@@ -581,6 +582,51 @@ describe('the StrictMode variants above are not duplicates of the plain ones', (
         `so anything but 2 means the option did not take and every "under StrictMode" scenario ` +
         `in this file is a silent duplicate of its plain twin.`,
     )
+  })
+})
+
+
+/* ── the latch is released even when the work throws ───────────────────────────────────────── */
+
+describe('a form is never wedged by a throw it did not expect', () => {
+  /**
+   * All six callers today catch their own errors, so `work` never rejects in production and the
+   * `finally` in `useSubmit` looks like decoration. It is not, and this is the scenario that keeps
+   * it: release the latch after the `try` instead of inside a `finally` and the FIRST unexpected
+   * throw — a bug in a body-builder, a `parseAmount` that escaped its catch, a seventh form
+   * written without one — leaves the button permanently dead with no message and no way back
+   * except a reload. That is a worse failure than the double submit this hook exists to stop, and
+   * it is the reason the release is where it is.
+   */
+  it('two presses whose work throws both run', async () => {
+    let calls = 0
+    const Probe = (): ReactElement => {
+      const { busy, run } = useSubmit()
+      return h(
+        'button',
+        {
+          onClick: () => {
+            void run(async () => {
+              calls += 1
+              await Promise.resolve()
+              throw new Error('the work threw, as a bug in a body-builder would')
+            }).catch(() => undefined)
+          },
+        },
+        busy ? 'Working…' : 'Press me — a probe for the submit latch, with text enough to mount',
+      )
+    }
+
+    await withScreen(h(Probe), { url: ORIGIN, routes: {} }, async (s) => {
+      await s.click(s.byRole('button', /press me/i))
+      await s.click(s.byRole('button', /press me/i))
+      assert.equal(
+        calls,
+        2,
+        `the second press did nothing: the latch was never released after the first press threw, ` +
+          `so the control is dead for the rest of the session with nothing on screen saying so`,
+      )
+    })
   })
 })
 

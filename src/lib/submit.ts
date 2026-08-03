@@ -46,8 +46,11 @@
  * "telling a client 'conflict' for work that is about to commit is how a purchase gets reported
  * as failed" — and the only way not to be that client is not to send the second request.
  *
- * It also does not swallow errors. `run` re-throws nothing and returns nothing; the caller's own
- * `try/catch` inside `work` stays exactly where it was, next to the sentence it renders.
+ * It also does not swallow errors. A rejection from `work` propagates out of `run` untouched; the
+ * caller's own `try/catch` stays inside `work`, next to the sentence it renders. What `run`
+ * guarantees is only that the latch is released either way, so a form is never wedged by a throw
+ * it did not expect — `test/double-submit.test.ts` presses a probe whose work throws twice in a
+ * row and requires both presses to run.
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  */
 import { useCallback, useRef, useState } from 'react'
@@ -83,9 +86,9 @@ export function useSubmit(): Submitter {
     try {
       await work()
     } finally {
-      // The ref first, and both in the `finally`. Releasing after the `try` instead would leave
-      // the form permanently dead the first time a request threw — which is the failure mode that
-      // makes people delete the latch rather than fix it.
+      // The ref first, and both in the `finally`. Releasing after the `try` instead would
+      // leave the form permanently dead the first time the work threw — which is the
+      // failure mode that makes people delete the latch rather than fix it.
       latch.current = false
       setBusy(false)
     }

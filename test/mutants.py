@@ -85,10 +85,16 @@ MUTATIONS: list[tuple[str, str, str, str]] = [
         "    setBusy(true)\n    try {\n      await work()\n      latch.current = true",
     ),
     (
-        "submit: release outside the finally, so one failure wedges the form",
+        "submit: release outside the finally, so one throw wedges the form for good",
         "src/lib/submit.ts",
-        "    } finally {",
-        "      latch.current = false\n      setBusy(false)\n    } catch {\n      throw new Error('x')\n    } finally {",
+        "    } finally {\n"
+        "      // The ref first, and both in the `finally`. Releasing after the `try` instead would\n"
+        "      // leave the form permanently dead the first time the work threw — which is the\n"
+        "      // failure mode that makes people delete the latch rather than fix it.\n"
+        "      latch.current = false\n"
+        "      setBusy(false)\n"
+        "    }",
+        "      latch.current = false\n      setBusy(false)\n    } finally {\n      void 0\n    }",
     ),
     (
         "submit: never raise busy, so the affordance never appears",
