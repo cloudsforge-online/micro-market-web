@@ -78,7 +78,23 @@ export function ListingPage() {
       />
     )
   }
-  if (listing.state === 'loading') return <Loading label="Loading the listing" />
+  // `listing.data === null` is doing real work here, and it is not defensive noise.
+  //
+  // A successful buy, bid or offer calls `onChanged` — `listing.reload()` — because the listing's
+  // status and its bids have moved and the page must not keep showing the old ones. `useResource`
+  // sets `loading` on a reload, so the naive `state === 'loading'` test replaced the WHOLE page
+  // with a spinner, unmounting `ListingBody` and with it the `ActionOutcome` that had just been
+  // rendered. The buyer's confirmation — including the only link to the order they had just paid
+  // for — was destroyed by the refresh their own purchase triggered, and the screen settled back
+  // to a listing with no evidence anything had happened.
+  //
+  // Found by BJ-MKT-05 and BJ-MKT-07 of docs/ecosystem/22-browser-journeys.md. A refresh over data
+  // we already have is not a load: the previous answer stays on screen until the new one arrives,
+  // which is also the only reading under which "no stale data left rendered as current" (hazard
+  // H5) and "the page does not blank" can both hold.
+  if (listing.state === 'loading' && listing.data === null) {
+    return <Loading label="Loading the listing" />
+  }
   if (listing.state === 'forbidden') return <Forbidden notice={listing.error ?? undefined} />
   if (listing.state === 'failed' || listing.data === null) {
     return (

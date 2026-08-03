@@ -62,7 +62,10 @@ export function SellPage() {
     },
     [subject],
   )
-  const drafts = useResource(load, (data) => data.listings.length, 'Your drafts did not load.')
+  // `[subject]`: it is null until `GET /auth/me` answers, which is always after mount.
+  const drafts = useResource(load, (data) => data.listings.length, 'Your drafts did not load.', [
+    subject,
+  ])
 
   const loadLive = useCallback(
     (signal: AbortSignal) => {
@@ -71,7 +74,9 @@ export function SellPage() {
     },
     [subject],
   )
-  const live = useResource(loadLive, (data) => data.listings.length, 'Your listings did not load.')
+  const live = useResource(loadLive, (data) => data.listings.length, 'Your listings did not load.', [
+    subject,
+  ])
 
   return (
     <>

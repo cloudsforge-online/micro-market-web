@@ -14,6 +14,7 @@
  */
 import assert from 'node:assert/strict'
 import { afterEach, beforeEach, describe, it } from 'node:test'
+import { IDENTITY_AUTH_ROUTES } from '@cloudsforge/ui'
 import {
   AUTH_EXPIRED_EVENT,
   ApiError,
@@ -210,19 +211,35 @@ describe('failures', () => {
 /* --------------------------- the auth callback ---------------------- */
 
 describe('auth callback', () => {
-  it('strips the code from the address bar BEFORE the exchange is sent', async () => {
+  /**
+   * A stand-in for identity that serves ONLY its redemption route.
+   *
+   * This block used to assert `trace[1].includes('/auth/exchange')` — a string lifted out of the
+   * implementation and compared with itself, green for every possible value including the wrong
+   * one it was pinning. **identity has never served `/auth/exchange`.** It serves
+   * `POST /auth/handoff/redeem` (`identity/src/server.ts:1084`), so every SSO callback in the
+   * estate 404'd, `consumeAuthCallback` returned null exactly as it does for a stale code, and it
+   * read as an expiry rather than as a wrong address. This line stayed green throughout.
+   *
+   * Now a wrong path gets a 404 from the stand-in, `consumeAuthCallback` returns null,
+   * `bootstrapSession()` is false and no token is stored — three assertions go red instead of
+   * none. The path comes from `@cloudsforge/ui`'s own declaration rather than from a literal here,
+   * so this file holds no second opinion about what identity serves.
+   */
+  const identityRedemption = (call: { url: string }) =>
+    new URL(call.url).pathname === IDENTITY_AUTH_ROUTES.handoffRedeem
+      ? json(200, { accessToken: 'a-new', refreshToken: 'r-new', expiresIn: 900 })
+      : json(404, { error: { code: 'not_found', message: 'identity serves no such route' } })
+
+  it('strips the code from the address bar BEFORE the redemption is sent', async () => {
     browser = installWindow('https://trade.cloudsforge.online/reports?tab=1#cf_code=abc123&view=grid')
-    stub = installFetch(
-      () => json(200, { accessToken: 'a-new', refreshToken: 'r-new' }),
-      browser.trace,
-    )
+    stub = installFetch(identityRedemption, browser.trace)
 
     assert.equal(await bootstrapSession(), true)
 
     // The ORDER is the assertion. Reverse the two side effects in @cloudsforge/ui and this fails.
     assert.equal(browser.trace[0], 'replaceState:/reports?tab=1#view=grid')
     assert.ok(browser.trace[1]?.startsWith('fetch:'))
-    assert.ok(browser.trace[1]?.includes('/auth/exchange'))
 
     // The rest of the fragment survives: an app may keep its own route there.
     assert.deepEqual(browser.replaced, ['/reports?tab=1#view=grid'])
@@ -230,7 +247,19 @@ describe('auth callback', () => {
     assert.equal(getAccessToken(), 'a-new')
   })
 
-  it('still strips the code when the exchange fails', async () => {
+  it('redeems at the route identity serves, on identity’s host', async () => {
+    browser = installWindow('https://market.cloudsforge.online/#cf_code=abc123')
+    stub = installFetch(identityRedemption, browser.trace)
+
+    assert.equal(await bootstrapSession(), true, 'the redemption was refused')
+    const sent = new URL(stub.calls[0]?.url ?? 'about:blank')
+    // Identity's host, not this surface's: the redemption is cross-origin from every bundle.
+    assert.equal(sent.origin, 'https://nimbus.cloudsforge.online')
+    assert.equal(sent.pathname, IDENTITY_AUTH_ROUTES.handoffRedeem)
+    assert.equal(stub.calls[0]?.method, 'POST')
+  })
+
+  it('still strips the code when the redemption fails', async () => {
     // An "after the exchange resolves" implementation never strips it at all on this path, and
     // the code stays in the address bar for as long as the tab is open.
     browser = installWindow('https://trade.cloudsforge.online/#cf_code=dead')
@@ -250,7 +279,7 @@ describe('auth callback', () => {
     })
 
     assert.equal(await bootstrapSession(), false)
-    assert.equal(calls, 0, 'no code means no exchange request')
+    assert.equal(calls, 0, 'no code means no redemption request')
     assert.deepEqual(browser.replaced, [], 'and no history rewrite either')
   })
 

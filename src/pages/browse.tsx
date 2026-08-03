@@ -39,7 +39,12 @@ export function BrowsePage() {
     [assetKind],
   )
 
-  const resource = useResource(load, (data) => data.listings.length, 'The listings did not load.')
+  // `[assetKind]`: it is the one filter the ROUTE reads, so changing it is a new request rather
+  // than a new view of the same one. The text filter and the sort are not here on purpose —
+  // both are applied in this bundle to what the request returned, and `searchScopeNote` says so.
+  const resource = useResource(load, (data) => data.listings.length, 'The listings did not load.', [
+    assetKind,
+  ])
   const all = resource.data?.listings ?? []
   const visible = useMemo(
     () => sortListings(filterListings(all, query), sort),

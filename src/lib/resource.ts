@@ -37,15 +37,40 @@ export interface Resource<T> {
 }
 
 /**
- * Run `load` on mount and on demand, and reduce the outcome to one of the four states.
+ * Run `load` on mount, when `deps` change, and on demand, and reduce the outcome to one of the
+ * four states.
  *
  * `count` exists because "empty" is a property of the DATA, not of the response: an object with
  * an empty list inside it is a 200 that should render the empty state.
+ *
+ * ── `deps`, and the two dead screens that made it necessary ───────────────────────────────────
+ *
+ * `load` is deliberately NOT a dependency of the effect: every caller builds it with `useCallback`
+ * and a stale-closure mistake there would turn into a request loop rather than into a wrong
+ * answer. That is still right. What was wrong was having no other way to say "the QUESTION has
+ * changed", and two screens were silently answering the old one:
+ *
+ *   `pages/sell.tsx` asks for `?sellerSubject=<subject>`, and `subject` is null until
+ *   `GET /auth/me` answers — which is always AFTER mount. With no dependency the effect never
+ *   re-ran, so both requests went out with no subject, resolved to the empty list the page
+ *   short-circuits to, and every signed-in seller was shown "No drafts" and "Nothing live" for
+ *   ever. There is no state in which that page worked.
+ *
+ *   `pages/browse.tsx` asks for `?assetKind=<kind>` from a `<select>`. Changing the Kind filter
+ *   re-rendered the page and re-created `load`, and never issued a request — a control that
+ *   looks like it filters and does not.
+ *
+ * Both were found by BJ-MKT-01 and BJ-MKT-11 of docs/ecosystem/22-browser-journeys.md. `deps` is
+ * spelled out by the caller for the same reason `load` is not: the caller knows which values the
+ * request is a function of, and writing them down is what makes a fourth screen with a fifth
+ * parameter fail loudly rather than quietly.
  */
 export function useResource<T>(
   load: (signal: AbortSignal) => Promise<T>,
   count: (data: T) => number,
   fallbackMessage: string,
+  /** The values `load` closes over. Changing any of them re-asks the question. */
+  deps: readonly unknown[] = [],
 ): Resource<T> {
   const [data, setData] = useState<T | null>(null)
   const [error, setError] = useState<ErrorNotice | null>(null)
@@ -70,10 +95,10 @@ export function useResource<T>(
         setLoading(false)
       })
     return () => controller.abort()
-    // `load` is recreated every render by most callers, so it is deliberately not a dependency;
-    // `nonce` is what re-runs this, and it changes only when reload() is called.
+    // `load` is recreated every render by most callers, so it is deliberately not a dependency.
+    // `nonce` re-runs this on demand, and `deps` re-runs it when the question itself changed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nonce])
+  }, [nonce, ...deps])
 
   const reload = useCallback(() => setNonce((n) => n + 1), [])
 
