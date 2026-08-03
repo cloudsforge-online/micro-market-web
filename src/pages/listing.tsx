@@ -53,6 +53,7 @@ import {
 import { formatMoney, parseAmountOrNull } from '../lib/money.ts'
 import { orderPath } from '../lib/routes.ts'
 import { useResource } from '../lib/resource.ts'
+import { useSubmit } from '../lib/submit.ts'
 
 /** The uuid at the end of `/listings/<id>`. The router gives us the path; this reads the segment. */
 function useListingId(): string {
@@ -429,33 +430,37 @@ function ActionPanel({
 function BuyForm({ listing, onChanged }: { listing: ListingView; onChanged: () => void }) {
   const intent = useIntent('buy')
   const [result, setResult] = useState<ActionResult>({ kind: 'none' })
-  const [busy, setBusy] = useState(false)
+  const { busy, run } = useSubmit()
   const price = parseAmountOrNull(listing.price)
 
-  const submit = async () => {
-    if (price === null) return
-    setBusy(true)
-    try {
-      // `amount` is the only body field the route reads (server.ts:829), and it is sent as the
-      // service's own string rather than reformatted — a re-rendered amount is a chance to change
-      // it, and the service compares it against the listing.
-      const response = await buyListing(intent.key, listing.id, { amount: listing.price ?? '0' })
-      setResult({
-        kind: 'ok',
-        message: response.replayed
-          ? 'This purchase had already gone through under the same key. Here it is again — you have not been charged twice.'
-          : 'Bought. The order is settled as a single ledger entry.',
-        orderId: response.order.id,
-        replayed: response.replayed,
-      })
-      intent.renew()
-      onChanged()
-    } catch (err) {
-      setResult({ kind: 'error', notice: noticeFor(err, 'The purchase did not go through.'), minimum: null })
-    } finally {
-      setBusy(false)
-    }
-  }
+  // `run` latches on a ref, so the second click of a double click never becomes a second request.
+  // That is not belt-and-braces on top of the idempotency key — the key stops a second ORDER, and
+  // this stops the second REQUEST, whose 503 `in_flight` (server.ts:459-466) this component would
+  // otherwise render as "The purchase did not go through." for a purchase that went through. The
+  // note under the button promises the reader that clicking twice is safe; this is what makes it
+  // true on the screen as well as in the ledger.
+  const submit = () =>
+    run(async () => {
+      if (price === null) return
+      try {
+        // `amount` is the only body field the route reads (server.ts:829), and it is sent as the
+        // service's own string rather than reformatted — a re-rendered amount is a chance to change
+        // it, and the service compares it against the listing.
+        const response = await buyListing(intent.key, listing.id, { amount: listing.price ?? '0' })
+        setResult({
+          kind: 'ok',
+          message: response.replayed
+            ? 'This purchase had already gone through under the same key. Here it is again — you have not been charged twice.'
+            : 'Bought. The order is settled as a single ledger entry.',
+          orderId: response.order.id,
+          replayed: response.replayed,
+        })
+        intent.renew()
+        onChanged()
+      } catch (err) {
+        setResult({ kind: 'error', notice: noticeFor(err, 'The purchase did not go through.'), minimum: null })
+      }
+    })
 
   return (
     <section className="mk-panel mk-panel--action">
@@ -494,42 +499,40 @@ function BidForm({
   const intent = useIntent('bid')
   const [amount, setAmount] = useState('')
   const [result, setResult] = useState<ActionResult>({ kind: 'none' })
-  const [busy, setBusy] = useState(false)
+  const { busy, run } = useSubmit()
 
   // The floor is computed the way the service computes it — `bids.ts:203` — so the form offers the
   // minimum the service will actually accept rather than one it would refuse.
   const floor = bidFloorFrom(listing, leaderAmount)
 
-  const submit = async () => {
-    setBusy(true)
-    try {
-      const response = await placeBid(intent.key, listing.id, { amount })
-      setResult({
-        kind: 'ok',
-        message:
-          (response.replayed
-            ? 'This bid had already been placed under the same key. '
-            : 'Bid placed. ') +
-          (response.outbid === null ? '' : 'It displaced the previous leader. ') +
-          (response.auctionEndsAt === null
-            ? ''
-            : `It landed late enough to extend the auction, which now closes ${utcDateTime(response.auctionEndsAt)}.`),
-        replayed: response.replayed,
-      })
-      intent.renew()
-      onChanged()
-    } catch (err) {
-      // A `bid_too_low` 409 carries the minimum as a string (server.ts:413-427) so a bidder can
-      // re-bid without a second round trip. Read off the parsed body, never off the sentence.
-      setResult({
-        kind: 'error',
-        notice: noticeFor(err, 'The bid was not placed.'),
-        minimum: bidMinimum(err),
-      })
-    } finally {
-      setBusy(false)
-    }
-  }
+  const submit = () =>
+    run(async () => {
+      try {
+        const response = await placeBid(intent.key, listing.id, { amount })
+        setResult({
+          kind: 'ok',
+          message:
+            (response.replayed
+              ? 'This bid had already been placed under the same key. '
+              : 'Bid placed. ') +
+            (response.outbid === null ? '' : 'It displaced the previous leader. ') +
+            (response.auctionEndsAt === null
+              ? ''
+              : `It landed late enough to extend the auction, which now closes ${utcDateTime(response.auctionEndsAt)}.`),
+          replayed: response.replayed,
+        })
+        intent.renew()
+        onChanged()
+      } catch (err) {
+        // A `bid_too_low` 409 carries the minimum as a string (server.ts:413-427) so a bidder can
+        // re-bid without a second round trip. Read off the parsed body, never off the sentence.
+        setResult({
+          kind: 'error',
+          notice: noticeFor(err, 'The bid was not placed.'),
+          minimum: bidMinimum(err),
+        })
+      }
+    })
 
   return (
     <section className="mk-panel mk-panel--action">
@@ -565,32 +568,30 @@ function OfferForm({ listing, onChanged }: { listing: ListingView; onChanged: ()
   const [amount, setAmount] = useState('')
   const [expires, setExpires] = useState('')
   const [result, setResult] = useState<ActionResult>({ kind: 'none' })
-  const [busy, setBusy] = useState(false)
+  const { busy, run } = useSubmit()
 
-  const submit = async () => {
-    setBusy(true)
-    try {
-      const response = await makeOffer(intent.key, listing.id, {
-        amount,
-        // Omitted rather than sent empty: `readDate` (server.ts:1348-1354) refuses anything that
-        // is not a valid ISO string, so `expiresAt: ''` would be a 400.
-        ...(expires === '' ? {} : { expiresAt: new Date(expires).toISOString() }),
-      })
-      setResult({
-        kind: 'ok',
-        message: response.replayed
-          ? 'That offer had already been made under the same key.'
-          : 'Offer made. The seller decides; your funds are reserved until they do or it expires.',
-        replayed: response.replayed,
-      })
-      intent.renew()
-      onChanged()
-    } catch (err) {
-      setResult({ kind: 'error', notice: noticeFor(err, 'The offer was not made.'), minimum: null })
-    } finally {
-      setBusy(false)
-    }
-  }
+  const submit = () =>
+    run(async () => {
+      try {
+        const response = await makeOffer(intent.key, listing.id, {
+          amount,
+          // Omitted rather than sent empty: `readDate` (server.ts:1348-1354) refuses anything that
+          // is not a valid ISO string, so `expiresAt: ''` would be a 400.
+          ...(expires === '' ? {} : { expiresAt: new Date(expires).toISOString() }),
+        })
+        setResult({
+          kind: 'ok',
+          message: response.replayed
+            ? 'That offer had already been made under the same key.'
+            : 'Offer made. The seller decides; your funds are reserved until they do or it expires.',
+          replayed: response.replayed,
+        })
+        intent.renew()
+        onChanged()
+      } catch (err) {
+        setResult({ kind: 'error', notice: noticeFor(err, 'The offer was not made.'), minimum: null })
+      }
+    })
 
   return (
     <section className="mk-panel mk-panel--action">

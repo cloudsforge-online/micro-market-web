@@ -29,6 +29,7 @@ import { getOrder, listOrders, openDispute, type DisputeView, type OrderView } f
 import { parseAmountOrNull } from '../lib/money.ts'
 import { listingPath, orderPath } from '../lib/routes.ts'
 import { useResource } from '../lib/resource.ts'
+import { useSubmit } from '../lib/submit.ts'
 
 /** The uuid at the end of `/orders/<id>`, or `''` for the index. */
 function useOrderId(): string {
@@ -249,23 +250,26 @@ function OrderBody({ order }: { order: OrderView }) {
 function DisputePanel({ order }: { order: OrderView }) {
   const intent = useIntent('dispute')
   const [reason, setReason] = useState('')
-  const [busy, setBusy] = useState(false)
+  const { busy, run } = useSubmit()
   const [opened, setOpened] = useState<{ dispute: DisputeView; replayed: boolean } | null>(null)
   const [error, setError] = useState<ErrorNotice | null>(null)
 
-  const submit = async () => {
-    setBusy(true)
-    setError(null)
-    try {
-      const response = await openDispute(intent.key, order.id, { reason: reason.trim() })
-      setOpened({ dispute: response.dispute, replayed: response.replayed })
-      intent.renew()
-    } catch (err) {
-      setError(noticeFor(err, 'The dispute was not opened.'))
-    } finally {
-      setBusy(false)
-    }
-  }
+  // The note under the button says "Pressing this twice is safe … which is what stops one
+  // complaint becoming two disputes and freezing the listing twice." The key is what makes that
+  // true of the DISPUTES; the ref latch below is what makes it true of the SCREEN, because the
+  // second concurrent request comes back 503 `in_flight` (market/src/server.ts:459-466) and this
+  // component would render it as "Not opened" over the dispute it had just opened.
+  const submit = () =>
+    run(async () => {
+      setError(null)
+      try {
+        const response = await openDispute(intent.key, order.id, { reason: reason.trim() })
+        setOpened({ dispute: response.dispute, replayed: response.replayed })
+        intent.renew()
+      } catch (err) {
+        setError(noticeFor(err, 'The dispute was not opened.'))
+      }
+    })
 
   return (
     <section className="mk-panel" aria-labelledby="mk-dispute-title">

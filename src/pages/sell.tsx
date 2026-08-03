@@ -49,6 +49,7 @@ import {
 import { AmountError, parseAmount, parseAmountOrNull } from '../lib/money.ts'
 import { listingPath } from '../lib/routes.ts'
 import { useResource } from '../lib/resource.ts'
+import { useSubmit } from '../lib/submit.ts'
 
 export function SellPage() {
   const { subject } = useSession()
@@ -156,26 +157,29 @@ function DraftRow({ listing, onActivated }: { listing: ListingView; onActivated:
   const intent = useIntent('activate')
   const [tx, setTx] = useState('')
   const [chain, setChain] = useState('ember')
-  const [busy, setBusy] = useState(false)
+  const { busy, run } = useSubmit()
   const [diagnosis, setDiagnosis] = useState<ActivationDiagnosis | null>(null)
   const knowledge = escrowKnowledge(listing)
   const onchain = listing.settlementMode === 'onchain'
 
-  const submit = async () => {
-    setBusy(true)
-    setDiagnosis(null)
-    try {
-      // For a custodial listing the route reads no body fields at all (server.ts:754), so none is
-      // sent. A field the route ignores is a field a seller will believe did something.
-      await activateListing(intent.key, listing.id, onchain ? { onchainEscrowTx: tx, chain } : {})
-      intent.renew()
-      onActivated()
-    } catch (err) {
-      setDiagnosis(diagnoseActivation(err))
-    } finally {
-      setBusy(false)
-    }
-  }
+  // A ref latch, not `busy`, because activation FAILS CLOSED on the chain index (see the file
+  // header). Two same-tick presses are two independent indexer reads under one key, and the second
+  // one's answer — 503 `indexer_unavailable` or 409 `state_conflict` — would be diagnosed and
+  // rendered over the first one's success. The seller would be told to go and re-post an escrow
+  // that has just been accepted.
+  const submit = () =>
+    run(async () => {
+      setDiagnosis(null)
+      try {
+        // For a custodial listing the route reads no body fields at all (server.ts:754), so none is
+        // sent. A field the route ignores is a field a seller will believe did something.
+        await activateListing(intent.key, listing.id, onchain ? { onchainEscrowTx: tx, chain } : {})
+        intent.renew()
+        onActivated()
+      } catch (err) {
+        setDiagnosis(diagnoseActivation(err))
+      }
+    })
 
   return (
     <div className="mk-draft">
@@ -260,7 +264,7 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
   const [quantity, setQuantity] = useState('1')
   const [royaltyBps, setRoyaltyBps] = useState('0')
   const [royaltySubject, setRoyaltySubject] = useState('')
-  const [busy, setBusy] = useState(false)
+  const { busy, run } = useSubmit()
   const [error, setError] = useState<ErrorNotice | null>(null)
   const [created, setCreated] = useState<{ id: string; degraded: boolean } | null>(null)
 
@@ -292,38 +296,36 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
     }
   }, [price, assetCode, bps, royaltyOk, royaltySubject])
 
-  const submit = async () => {
-    setBusy(true)
-    setError(null)
-    try {
-      // Validated here first, with the service's own rule, so a malformed amount fails on the
-      // field that is wrong rather than as a 400 the reader has to translate back.
-      const amount = pricingMode === 'offers_only' ? null : parseAmount(price, 'price')
-      const response = await createListing(intent.key, {
-        assetKind,
-        pricingMode,
-        settlementMode,
-        itemUrn: itemUrn.trim(),
-        itemAssetCode,
-        assetCode,
-        price: amount === null ? null : amount.toString(),
-        quantity: parseAmount(quantity, 'quantity').toString(),
-        royaltyBps: bps,
-        ...(bps > 0 ? { royaltyRecipients: [{ subject: royaltySubject.trim(), bps: 10_000 }] } : {}),
-      })
-      setCreated({ id: response.listing.id, degraded: response.policy.degraded })
-      intent.renew()
-      onCreated()
-    } catch (err) {
-      setError(
-        err instanceof AmountError
-          ? { message: err.message, requestId: undefined, forbidden: false }
-          : noticeFor(err, 'The listing was not created.'),
-      )
-    } finally {
-      setBusy(false)
-    }
-  }
+  const submit = () =>
+    run(async () => {
+      setError(null)
+      try {
+        // Validated here first, with the service's own rule, so a malformed amount fails on the
+        // field that is wrong rather than as a 400 the reader has to translate back.
+        const amount = pricingMode === 'offers_only' ? null : parseAmount(price, 'price')
+        const response = await createListing(intent.key, {
+          assetKind,
+          pricingMode,
+          settlementMode,
+          itemUrn: itemUrn.trim(),
+          itemAssetCode,
+          assetCode,
+          price: amount === null ? null : amount.toString(),
+          quantity: parseAmount(quantity, 'quantity').toString(),
+          royaltyBps: bps,
+          ...(bps > 0 ? { royaltyRecipients: [{ subject: royaltySubject.trim(), bps: 10_000 }] } : {}),
+        })
+        setCreated({ id: response.listing.id, degraded: response.policy.degraded })
+        intent.renew()
+        onCreated()
+      } catch (err) {
+        setError(
+          err instanceof AmountError
+            ? { message: err.message, requestId: undefined, forbidden: false }
+            : noticeFor(err, 'The listing was not created.'),
+        )
+      }
+    })
 
   return (
     <section className="mk-panel mk-panel--action">
