@@ -123,10 +123,11 @@ export interface Reply {
 /**
  * A route table for the stubbed API.
  *
- * The key is `"<METHOD> <path prefix>"`, matched longest-prefix-first so `POST /v1/listings/x/
- * activate` beats `POST /v1/listings`. The value is either a fixed reply or a function of the
- * request, which is what the idempotency scenarios need: they answer differently on the second
- * call under the same key, exactly as `market/src/server.ts:1168-1173` does.
+ * The key is `"<METHOD> <path prefix>"`, matched longest-prefix-first so a nested path beats the
+ * collection it hangs off. The value is either a fixed reply or a function of the request, which
+ * is what the idempotency and replay scenarios need: a service that has already done the work
+ * answers the second call differently from the first, and a stub that could not would make every
+ * double-submit scenario assert the same thing twice.
  */
 export type Routes = Record<string, Reply | ((wire: Wire, n: number) => Reply)>
 
@@ -157,6 +158,14 @@ export interface MountOptions {
   allowEmpty?: boolean
   /** `prefers-reduced-motion: reduce` for the media-query scenarios. */
   reducedMotion?: boolean
+  /**
+   * Extra properties on `window`, for the things a page reads off it that no API returns.
+   *
+   * `window.ethereum` is the one that matters: an injected EIP-1193 provider is not a response
+   * this harness can stub, it is a global a browser extension put there, and a scenario about
+   * what the browser hands the wallet cannot be written without one.
+   */
+  windowExtras?: Record<string, unknown>
 }
 
 export interface Screen {
@@ -300,7 +309,7 @@ function setNativeValue(el: Element, value: string): void {
 function tabbablesIn(doc: Document): Element[] {
   const candidates = [
     ...doc.querySelectorAll(
-      'a[href], button, input, select, textarea, [tabindex], [contenteditable="true"]',
+      'a[href], button, input, select, textarea, summary, [tabindex], [contenteditable="true"]',
     ),
   ]
   return candidates.filter((el) => {
@@ -339,6 +348,10 @@ export async function mount(element: ReactElement, options: MountOptions = {}): 
     removeListener: () => undefined,
     dispatchEvent: () => false,
   })
+
+  for (const [k, v] of Object.entries(options.windowExtras ?? {})) {
+    ;(win as unknown as Record<string, unknown>)[k] = v
+  }
 
   const saved = new Map<string, PropertyDescriptor | undefined>()
   const g = globalThis as unknown as Record<string, unknown>
@@ -585,7 +598,18 @@ export async function mount(element: ReactElement, options: MountOptions = {}): 
       // activeElement afterwards.
       const order = tabbablesIn(doc)
       const here = doc.activeElement as Element | null
-      const at = here ? order.indexOf(here) : -1
+      let at = here ? order.indexOf(here) : -1
+      if (at < 0 && here) {
+        // The focused element is not itself tabbable — a `tabindex="-1"` dialog is the case that
+        // matters, and it is the state a modal is in immediately after mount. A real browser moves
+        // to the next tabbable AFTER it in document order; the naive fallback of "start at index
+        // 0" sends focus BACKWARDS to the top of the page, which is a place a focus trap has no
+        // reason to guard and made this harness report an escape that a browser would never make.
+        const following = order.findIndex(
+          (el) => (here.compareDocumentPosition(el) & 4) !== 0, // DOCUMENT_POSITION_FOLLOWING
+        )
+        at = following < 0 ? order.length - 1 : following - 1
+      }
       const next = back
         ? order[(at <= 0 ? order.length : at) - 1]
         : order[(at + 1) % Math.max(order.length, 1)]
