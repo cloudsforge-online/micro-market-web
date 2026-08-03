@@ -39,6 +39,7 @@ RUN = [
     "--test",
     "test/double-submit.test.ts",
     "test/outage.test.ts",
+    "test/resource.test.ts",
     "test/journeys.test.ts",
 ]
 
