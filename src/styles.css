@@ -763,20 +763,11 @@ body {
 
 /* ------------------------------ footer ----------------------------- */
 
-.mk-footer {
-  max-width: 78rem;
-  margin: 0 auto;
-  padding: 1.5rem 1rem 3rem;
-  border-top: 1px solid var(--cf-line);
-  color: var(--cf-fg-mute);
-  font-size: 0.82rem;
-  line-height: 1.6;
-}
-
-.mk-footer p {
-  margin: 0;
-  max-width: 52rem;
-}
+/* `.mk-footer` and `.mk-footer p` were here. Deleted with the markup: the footer is now
+   `CloudsForgeFooter` from @cloudsforge/ui and brings its own `.cf-foot` rules. Note what these
+   two rules had drifted into — `78rem`, `1.5rem 1rem 3rem`, `0.82rem`, `52rem`, four raw literals
+   where the shared footer uses --cf-max-w and the spacing scale. That is the same drift ui.css
+   already records for the five hand-written `.mk-input`/`.tw-input` copies. */
 
 /* ------------------------- the four states ------------------------- */
 
