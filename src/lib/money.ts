@@ -51,7 +51,16 @@ export const ASSET_DECIMALS: Readonly<Record<string, number>> = Object.freeze({
   BTC: 8,
   XRP: 6,
   USD: 2,
-  // One Shard is one US cent, and it is an integer. `chain/src/index.ts:112-120`.
+  // One Shard is one US cent, and it is an integer: `contracts/packages/chain/src/index.ts:264`,
+  // inside the `CHAINS.SHARD` spec at :260-266. The old citation here was `:112-120`, which today
+  // is an unrelated explorer-link type — SHARD was retired in place on 2026-08-04 (`RETIRED_ASSETS`,
+  // ibid. :58) and the spec moved down the file.
+  //
+  // The ZERO IS STILL CORRECT AND MUST STAY. Retired is not removed: 121 accounts still hold real
+  // Shard liability, and the contract package says of this very field that "`decimals: 0` in
+  // particular is load-bearing, because it is the only thing that says a stored `250` means 250
+  // Shards and not 250 wei" (ibid. :255-259). Deleting the row to "finish the migration" would
+  // rescale every stored Shard amount by 10¹⁸ silently.
   SHARD: 0,
 })
 
