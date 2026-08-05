@@ -9,12 +9,18 @@
  *   `GET /v1/listings/:id/offers` server.ts:893 — standing offers
  *   and one of buy / bid / offer, each requiring an Idempotency-Key.
  *
+ * The gallery is NOT a sixth call: `GET /v1/listings/:id` carries `images` alongside the listing,
+ * so the photographs arrive with the text rather than a round trip later. See
+ * `components/gallery.tsx` for the three states one of those images can be in — and for why none of
+ * them is a badge.
+ *
  * The four reads are independent, and one failing must not blank the others: a listing whose risk
  * call failed is still a listing somebody can read and buy. So each is its own resource with its
  * own degradation, and the page names what is missing rather than showing less and saying nothing.
  */
 import { useCallback, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { Gallery } from '../components/gallery.tsx'
 import { Amount, Breakdown, MaybeAmount } from '../components/money.tsx'
 import { Badge, EscrowPanel, ModerationNotice, RiskPanel, VerificationBadge } from '../components/status.tsx'
 import { Failed, Forbidden, Loading } from '../components/states.tsx'
@@ -169,6 +175,14 @@ function ListingBody({ detail, onChanged }: { detail: ListingDetail; onChanged: 
       </header>
 
       <ModerationNotice listing={listing} />
+
+      {/*
+        Above the price, below the moderation notice. A photograph is the first thing a buyer looks
+        at, and it must not push a "this listing is under review" warning off the top of the screen.
+        `?? []` because `images` is optional on the wire type: a service older than this bundle sends
+        no such key, and `.map` on `undefined` would blank the whole page rather than the gallery.
+      */}
+      <Gallery images={detail.images ?? []} itemUrn={listing.itemUrn} />
 
       <div className="mk-columns">
         <div className="mk-columns__main">

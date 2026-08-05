@@ -855,3 +855,119 @@ body {
     animation: none;
   }
 }
+
+/* ------------------------------ galleries -------------------------- */
+
+/*
+ * A listing's photographs, on the listing page and in its seller's editor.
+ *
+ * Every image is constrained by `max-height` rather than by a fixed aspect ratio, and
+ * `object-fit: contain` is deliberate: micro-studio bounds dimensions but does not crop, so a
+ * seller's tall photograph of a sword must not be cut in half to fit a square somebody chose here.
+ * A letterboxed image is honest about its shape; a cropped one silently hides part of what is
+ * being sold, which on a marketplace is a claim about the item.
+ */
+.mk-gallery {
+  margin: 0 0 1rem;
+}
+
+.mk-gallery__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mk-gallery__item {
+  margin: 0;
+}
+
+.mk-gallery__img {
+  display: block;
+  max-width: 100%;
+  max-height: 18rem;
+  object-fit: contain;
+  border: 1px solid var(--cf-line);
+  border-radius: 6px;
+  /* A dark surface behind a transparent PNG, so the letterboxing is part of the frame rather than
+   * a white rectangle that looks like a rendering fault. */
+  background: var(--cf-bg-raise, #000);
+}
+
+.mk-gallery-edit {
+  margin: 0.75rem 0 0;
+}
+
+.mk-gallery-edit__title {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  color: var(--cf-fg-dim);
+}
+
+.mk-gallery-edit__list {
+  margin: 0 0 0.6rem;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.mk-gallery-edit__row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.mk-gallery-edit__thumb {
+  width: 3.5rem;
+  height: 3.5rem;
+  object-fit: contain;
+  border: 1px solid var(--cf-line);
+  border-radius: 4px;
+  background: var(--cf-bg-raise, #000);
+}
+
+/* The image exists and its address does not — see `components/gallery.tsx`. A placeholder rather
+ * than a hidden row, so a seller can still reorder and remove what they uploaded. */
+.mk-gallery-edit__thumb--absent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cf-fg-mute);
+}
+
+.mk-gallery-edit__ord {
+  font-variant-numeric: tabular-nums;
+  color: var(--cf-fg-mute);
+  font-size: 0.82rem;
+  min-width: 1.5rem;
+}
+
+/*
+ * A row that carries a gallery editor under its summary line.
+ *
+ * `.mk-rows__row` is a horizontal flex line, and dropping a block of controls into it would lay
+ * them out beside the price. The modifier turns the row into a column and restores the horizontal
+ * rule as an inner line, so the summary reads exactly as it did before the editor existed.
+ */
+.mk-rows__row--stacked {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.mk-rows__line {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.mk-rows__line > a {
+  flex: 1 1 16rem;
+  word-break: break-all;
+  color: var(--cf-accent);
+}

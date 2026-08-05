@@ -82,6 +82,11 @@ const listingAt = (path = `/listings/${fx.LISTING_ID}`) => page(h(ListingPage), 
 function sellRoutes(drafts: readonly unknown[] = [fx.listing({ status: 'draft' })]): Routes {
   return {
     'GET /auth/me': { body: fx.ME },
+    // The gallery editor on each draft asks where a browser reaches micro-studio. Answered as a
+    // deployment that HAS an address, because an unmatched route throws in this harness and every
+    // sell scenario would then be asserting against a page showing an image-service error it was
+    // not written to be about.
+    'GET /v1/images/config': { body: fx.imageConfig() },
     'GET /v1/listings': (w) => ({
       body: { listings: /status=draft/.test(w.path) ? drafts : [] },
     }),
@@ -1195,6 +1200,100 @@ describe('BJ-MARKET-404 — an unowned address answers 404', () => {
 /* ══════════════════════════════════════════════════════════════════════════════════════════════
    The meta-test. Doc 22 §3.2.
    ══════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════════════════════════════════════════
+   Listing images — not a doc 22 scenario
+   ══════════════════════════════════════════════════════════════════════════════════════════════
+
+   Doc 22 predates galleries and assigns no id to them, and an id invented here would fail the
+   catalogue meta-test below — correctly, because that test is what stops this file and doc 22
+   drifting apart. So these are plain scenarios in the same tier-1 shape: the bundle, a document,
+   and stubbed responses, asserting TEXT, DOCUMENT ORDER and ACCESSIBLE NAMES, which is what doc 22
+   §3.1 allows.
+
+   The second one is the important one, and it is about a claim rather than a pixel. An image on
+   this surface has a RECORDED content address and NOT a chain attestation — Hearth has no Registry
+   of Authorship contract, so studio's `anchor.state` is `'unanchored'` on every asset in existence.
+   A tick that always appears, on a page where people spend real money, is worse than no tick. This
+   asserts the words are absent, so adding one has to break a test.
+   ══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+describe('a listing gallery', () => {
+  it('renders one image per gallery entry, in position order, from studio', async () => {
+    const images = [
+      fx.image({ studioAssetId: 'aaaaaaaa-0000-4000-8000-000000000001', position: 0 }),
+      fx.image({ studioAssetId: 'aaaaaaaa-0000-4000-8000-000000000002', position: 1 }),
+    ]
+    await withScreen(
+      listingAt(),
+      {
+        url: `${ORIGIN}/listings/${fx.LISTING_ID}`,
+        routes: listingRoutes({
+          [`GET /v1/listings/${fx.LISTING_ID}`]: { body: { ...fx.detail(), images } },
+        }),
+      },
+      async (s) => {
+        const rendered = [...s.document.querySelectorAll('img.mk-gallery__img')]
+        assert.equal(rendered.length, images.length)
+        // Document order IS gallery order. A `sort` that got lost would show a seller's third
+        // photograph first, which on a marketplace is a different item to a scrolling buyer.
+        assert.deepEqual(
+          rendered.map((img) => img.getAttribute('src')),
+          images.map((image) => image.bytesUrl),
+        )
+        // Every one is described. An `<img>` with no alt is invisible to a screen reader and
+        // indistinguishable from a broken one to everybody else.
+        for (const img of rendered) {
+          assert.ok((img.getAttribute('alt') ?? '').length > 0, 'an image has no alt text')
+        }
+      },
+    )
+  })
+
+  it('never calls an image verified, attested, anchored or on-chain', async () => {
+    await withScreen(
+      listingAt(),
+      {
+        url: `${ORIGIN}/listings/${fx.LISTING_ID}`,
+        routes: listingRoutes({
+          [`GET /v1/listings/${fx.LISTING_ID}`]: {
+            body: { ...fx.detail(), images: [fx.image()] },
+          },
+        }),
+      },
+      async (s) => {
+        const text = s.text().toLowerCase()
+        for (const claim of ['attested', 'anchored', 'on-chain', 'verified image']) {
+          assert.equal(text.includes(claim), false, `the listing page claims "${claim}"`)
+        }
+        // And the checksum is not paraded either: it is an identifier, and a 64-character hex
+        // string beside a photograph reads as a proof to anybody who does not know better.
+        assert.equal(text.includes('sha256:'), false)
+      },
+    )
+  })
+
+  it('says images are unavailable rather than pretending there are none', async () => {
+    // `bytesUrl: null` is what every deployment returns today — `STUDIO_PUBLIC_URL` is unset,
+    // because studio has no public hostname in the estate. Rendering nothing would tell a seller
+    // who uploaded six photographs that their work had vanished.
+    await withScreen(
+      listingAt(),
+      {
+        url: `${ORIGIN}/listings/${fx.LISTING_ID}`,
+        routes: listingRoutes({
+          [`GET /v1/listings/${fx.LISTING_ID}`]: {
+            body: { ...fx.detail(), images: [fx.image({ bytesUrl: null })] },
+          },
+        }),
+      },
+      async (s) => {
+        assert.equal(s.document.querySelectorAll('img.mk-gallery__img').length, 0)
+        assert.match(s.text(), /images are not available on this deployment/i)
+      },
+    )
+  })
+})
 
 describe('the catalogue and this file agree', () => {
   it('every id doc 22 assigns to this surface is accounted for exactly once', () => {

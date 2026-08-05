@@ -15,6 +15,7 @@
  */
 import type {
   BidView,
+  ListingImageView,
   ListingDetail,
   ListingView,
   OfferView,
@@ -54,6 +55,42 @@ export function listing(over: Partial<ListingView> = {}): ListingView {
 
 export function detail(over: Partial<ListingView> = {}): ListingDetail {
   return { listing: listing(over), royalties: [{ subject: SELLER, bps: 500 }] }
+}
+
+/** Where a browser would reach micro-studio, on a deployment that has been told. */
+export const STUDIO = 'https://studio.cloudsforge.test'
+
+/**
+ * One gallery entry, as `imageWire` emits it.
+ *
+ * `bytesUrl` defaults to an ABSOLUTE studio address, which is the state a configured deployment is
+ * in. Pass `bytesUrl: null` for the state every deployment is actually in today — `STUDIO_PUBLIC_URL`
+ * is unset, so the service answers null rather than a URL that would 404 against market's origin.
+ */
+export function image(over: Partial<ListingImageView> = {}): ListingImageView {
+  const studioAssetId = over.studioAssetId ?? 'aaaaaaaa-0000-4000-8000-000000000001'
+  return {
+    studioAssetId,
+    checksum: `sha256:${'a'.repeat(64)}`,
+    position: 0,
+    bytesUrl: `${STUDIO}/v1/assets/${studioAssetId}/bytes`,
+    ...over,
+  }
+}
+
+/** `GET /v1/images/config`, as a deployment that can accept uploads answers it. */
+export function imageConfig(): {
+  uploadUrl: string
+  maxImagesPerListing: number
+  acceptedMediaTypes: readonly string[]
+} {
+  return {
+    uploadUrl: `${STUDIO}/v1/uploads`,
+    // Ten, from `MAX_LISTING_IMAGES` in `market/src/listingimages.ts` — the constant the schema's
+    // `listing_images_position_range` is written against.
+    maxImagesPerListing: 10,
+    acceptedMediaTypes: ['image/png', 'image/jpeg', 'image/webp'],
+  }
 }
 
 export function risk(over: Partial<RiskView> = {}): RiskView {

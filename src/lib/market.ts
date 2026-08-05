@@ -123,6 +123,45 @@ export interface ListingView {
   /** An escrow reference exists. NOT "the chain confirmed it". See `escrow.ts`. */
   readonly escrowed: boolean
   readonly createdAt: string
+  /**
+   * The gallery, in position order, on BOTH listing reads.
+   *
+   * Optional on this type rather than required, because it arrives from a service that may be older
+   * than this bundle: a browse response from a market without galleries has no `images` key at all,
+   * and a required field would type that as an array while it is `undefined` at runtime — which is
+   * `.map` on undefined at the top of a page. Every reader takes `?? []`.
+   */
+  readonly images?: readonly ListingImageView[]
+}
+
+/**
+ * One image in a listing's gallery — `imageWire`, `market/src/server.ts`.
+ *
+ * ── Two fields that are easy to read as more than they are ────────────────────────────────────
+ *
+ * **`bytesUrl` is nullable, and null is the normal case today.** The service composes it from
+ * `STUDIO_PUBLIC_URL`, and when that is unset it answers `null` rather than the relative
+ * `/v1/assets/<id>/bytes` that studio's own responses carry — because a relative path would resolve
+ * against the page's origin, ask `micro-market` for the bytes, and 404 with nothing to explain it.
+ * There is no public studio hostname in the estate at the time of writing (no router in
+ * `deploy/gateway/dynamic/`, no `studio` entry in the surface registry), so a client that assumed a
+ * string here would render a broken image on every listing. `<Gallery>` says so out loud instead.
+ *
+ * **`checksum` is a RECORDED content address and nothing else.** It is `sha256:<64 lowercase hex>`,
+ * the spelling studio and tessera both use, and it is on the wire so an operator can ask studio
+ * about those exact bytes. It is NOT evidence: market never fetches the asset and never recomputes
+ * the digest (`market/src/listingimages.ts` says so at length), and there is no chain behind it —
+ * Hearth has no Registry of Authorship contract, so studio's own `anchor.state` is `'unanchored'`
+ * on every asset that exists. Nothing in this app may render it as "verified", "attested",
+ * "anchored" or "on-chain". A tick that always appears is worse than no tick.
+ */
+export interface ListingImageView {
+  readonly studioAssetId: string
+  readonly checksum: string
+  /** Dense and zero-based; the service keeps `0 … n-1` with no gaps. */
+  readonly position: number
+  /** Absolute, or `null` when this deployment has not been told where a browser reaches studio. */
+  readonly bytesUrl: string | null
 }
 
 /** The royalty split as `GET /v1/listings/:id` returns it — `server.ts:643-646`. Bps, not amounts. */
@@ -134,6 +173,13 @@ export interface RoyaltySplitEntry {
 export interface ListingDetail {
   readonly listing: ListingView
   readonly royalties: readonly RoyaltySplitEntry[]
+  /**
+   * The gallery, alongside the listing rather than behind a call of its own.
+   *
+   * It is on the detail response AND on each listing in the browse response, so a card can show a
+   * picture without a second round trip. Same reason it is optional here as on `ListingView`.
+   */
+  readonly images?: readonly ListingImageView[]
 }
 
 /** `Verification` — `market/src/listings.ts:216-222`. `reviewedAt` is an ISO string on the wire. */
@@ -361,6 +407,104 @@ export async function listOffers(
   opts: RequestOptions = {},
 ): Promise<{ offers: readonly OfferView[] }> {
   return api(`/v1/listings/${encodeURIComponent(listingId)}/offers`, { auth: false, ...opts })
+}
+
+/**
+ * `GET /v1/images/config` — **`market/src/server.ts`**, the `/v1/images/config` route.
+ *
+ * Where a browser sends image bytes, and how many images a listing may hold. Public and
+ * unauthenticated, because it is configuration rather than data: the sell page has to be able to
+ * tell a signed-out visitor whether images work on this deployment at all.
+ *
+ * **`uploadUrl: null` is the answer today**, and a caller must render that state rather than a
+ * control that cannot work. The value comes from `STUDIO_PUBLIC_URL` in the service's environment;
+ * there is no public studio hostname in the estate yet, so it is unset. This app cannot compose one
+ * itself — `@cloudsforge/ui`'s registry has no `studio` key, and a hostname invented here would be
+ * one nothing serves.
+ */
+export async function getImageConfig(opts: RequestOptions = {}): Promise<{
+  uploadUrl: string | null
+  maxImagesPerListing: number
+  acceptedMediaTypes: readonly string[]
+}> {
+  return api('/v1/images/config', { auth: false, ...opts })
+}
+
+/**
+ * `POST /v1/listings/:id/images` — **`market/src/server.ts`**, the listing-images section.
+ *
+ * Attaches an asset ALREADY UPLOADED to micro-studio; the bytes never pass through market. Body:
+ * `studioAssetId` and `checksum`, both required, the checksum in studio's exact spelling
+ * (`sha256:<64 lowercase hex>`) or the service answers 400.
+ *
+ * Wrapped in `withIdempotentRoute`, so it answers 201 the first time and 200 with `replayed: true`
+ * on a retry of the same key — never an error. Only the listing's seller may call it, and anyone
+ * else gets **404**, not 403: "exists but is not yours" as a distinct status is an oracle for who is
+ * selling what. A listing that is `sold`, `settling`, `cancelled` or `expired` answers 409 — its
+ * photographs are part of the record of what was sold.
+ *
+ * The image is appended to the end of the gallery. There is no `position` field; use
+ * `setListingGallery` to order them.
+ */
+export async function attachListingImage(
+  key: string,
+  listingId: string,
+  body: { studioAssetId: string; checksum: string },
+  opts: RequestOptions = {},
+): Promise<{ image: ListingImageView; images: readonly ListingImageView[] } & Replayable> {
+  return api(`/v1/listings/${encodeURIComponent(listingId)}/images`, {
+    method: 'POST',
+    headers: idempotentHeaders(key),
+    body,
+    ...opts,
+  })
+}
+
+/**
+ * `DELETE /v1/listings/:id/images/:assetId` — **`market/src/server.ts`**.
+ *
+ * Unsays a reference. The asset itself is NOT deleted: studio owns it, and the user may be showing
+ * it on another listing.
+ *
+ * Detaching something that is not attached answers 200 with `detached: false` rather than 404 — the
+ * caller asked for a gallery without that image and that is the gallery they have, so a retried
+ * DELETE does not report a failure for work that succeeded. The key is still sent, as everywhere
+ * else on this surface.
+ */
+export async function detachListingImage(
+  key: string,
+  listingId: string,
+  studioAssetId: string,
+  opts: RequestOptions = {},
+): Promise<{ detached: boolean; images: readonly ListingImageView[] }> {
+  return api(
+    `/v1/listings/${encodeURIComponent(listingId)}/images/${encodeURIComponent(studioAssetId)}`,
+    { method: 'DELETE', headers: idempotentHeaders(key), ...opts },
+  )
+}
+
+/**
+ * `PUT /v1/listings/:id/images` — **`market/src/server.ts`**.
+ *
+ * The COMPLETE gallery, in the order it should render: an entry not already attached is attached,
+ * an attached asset left out is detached, and the array index becomes the position. That is why it
+ * is a PUT and why it needs no idempotency wrapper — the same body twice leaves the same gallery.
+ *
+ * There is deliberately no "move image 3 to position 1" call to use instead: two clients issuing two
+ * moves against one gallery produce an ordering neither asked for.
+ */
+export async function setListingGallery(
+  key: string,
+  listingId: string,
+  images: readonly { studioAssetId: string; checksum: string }[],
+  opts: RequestOptions = {},
+): Promise<{ images: readonly ListingImageView[] }> {
+  return api(`/v1/listings/${encodeURIComponent(listingId)}/images`, {
+    method: 'PUT',
+    headers: idempotentHeaders(key),
+    body: { images },
+    ...opts,
+  })
 }
 
 /**

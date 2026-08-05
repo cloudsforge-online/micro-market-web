@@ -117,6 +117,15 @@ export interface FetchCall {
   method: string
   headers: Record<string, string>
   body: string | undefined
+  /**
+   * The body EXACTLY as it was handed to `fetch`, before any narrowing.
+   *
+   * `body` above is only the string case, which covers every JSON call this app makes. The image
+   * upload sends a `Blob` — `micro-studio` takes raw image bytes as the whole request body and has
+   * no multipart parser at all — so a test that only saw the string case could not tell a Blob from
+   * a `FormData` from nothing at all, which is precisely the mistake that would break the upload.
+   */
+  raw: unknown
 }
 
 export interface FetchStub {
@@ -139,6 +148,7 @@ export function installFetch(
       method: init?.method ?? 'GET',
       headers,
       body: typeof init?.body === 'string' ? init.body : undefined,
+      raw: init?.body,
     }
     calls.push(call)
     trace?.push(`fetch:${call.url}`)

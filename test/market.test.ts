@@ -39,11 +39,14 @@ import {
   SETTLEMENT_MODES,
   acceptOffer,
   activateListing,
+  attachListingImage,
   bidMinimum,
   buyListing,
   cancelListing,
   createCollection,
   createListing,
+  detachListingImage,
+  getImageConfig,
   getListing,
   getListingRisk,
   getOrder,
@@ -56,6 +59,7 @@ import {
   makeOffer,
   openDispute,
   placeBid,
+  setListingGallery,
   withdrawOffer,
 } from '../src/lib/market.ts'
 
@@ -628,6 +632,67 @@ describe('DELETE /v1/offers/:id — market/src/server.ts:917', () => {
   it('sends no body: `to: withdrawn` is fixed by the service (server.ts:922)', async () => {
     await withdrawOffer(KEY, UUID)
     assert.equal(onlyCall().body, undefined)
+  })
+})
+
+describe('the listing image routes — market/src/server.ts, the listing-images section', () => {
+  const ASSET = 'aaaaaaaa-1111-4111-8111-111111111111'
+  const CHECKSUM = `sha256:${'a'.repeat(64)}`
+
+  it('reads the image config without a token, because it is configuration and not data', async () => {
+    await getImageConfig()
+    const call = onlyCall()
+    assert.equal(call.method, 'GET')
+    assert.equal(call.url.pathname, '/v1/images/config')
+    // No Authorization: the sell page must be able to tell a signed-out visitor whether images
+    // work on this deployment at all.
+    assert.equal(call.headers['authorization'], undefined)
+  })
+
+  it('attaches by REFERENCE — an asset id and a checksum, never bytes', async () => {
+    await attachListingImage(KEY, UUID, { studioAssetId: ASSET, checksum: CHECKSUM })
+    const call = onlyCall()
+    assert.equal(call.method, 'POST')
+    assert.equal(call.url.pathname, `/v1/listings/${UUID}/images`)
+    // The bytes went to micro-studio. This service holds a reference and authorises it; a body
+    // here carrying anything image-shaped would mean the estate had grown a second media service.
+    assert.deepEqual(bodyOf(), { studioAssetId: ASSET, checksum: CHECKSUM })
+  })
+
+  it('sends the checksum in studio’s exact spelling, because the column checks the shape', async () => {
+    await attachListingImage(KEY, UUID, { studioAssetId: ASSET, checksum: CHECKSUM })
+    // `listing_images_checksum_shape` is `^sha256:[0-9a-f]{64}$`. A bare digest or an uppercase one
+    // is a 400 — and, worse, would compare unequal to studio’s own row for the same bytes for ever.
+    assert.match(String(bodyOf()['checksum']), /^sha256:[0-9a-f]{64}$/)
+  })
+
+  it('carries an Idempotency-Key on the attach, which the service requires', async () => {
+    await attachListingImage(KEY, UUID, { studioAssetId: ASSET, checksum: CHECKSUM })
+    assert.equal(onlyCall().headers['idempotency-key'], KEY)
+  })
+
+  it('detaches at the asset under the listing, and sends no body', async () => {
+    await detachListingImage(KEY, UUID, ASSET)
+    const call = onlyCall()
+    assert.equal(call.method, 'DELETE')
+    assert.equal(call.url.pathname, `/v1/listings/${UUID}/images/${ASSET}`)
+    assert.equal(call.body, undefined)
+  })
+
+  it('reorders with a PUT of the WHOLE gallery, in array order', async () => {
+    const second = 'bbbbbbbb-2222-4222-8222-222222222222'
+    await setListingGallery(KEY, UUID, [
+      { studioAssetId: second, checksum: CHECKSUM },
+      { studioAssetId: ASSET, checksum: CHECKSUM },
+    ])
+    const call = onlyCall()
+    assert.equal(call.method, 'PUT')
+    assert.equal(call.url.pathname, `/v1/listings/${UUID}/images`)
+    // Position is the INDEX. There is no `position` field, and sending one would be sending a field
+    // the route does not read.
+    const images = bodyOf()['images'] as Record<string, unknown>[]
+    assert.deepEqual(images.map((image) => image['studioAssetId']), [second, ASSET])
+    assert.equal(Object.hasOwn(images[0] ?? {}, 'position'), false)
   })
 })
 

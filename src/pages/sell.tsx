@@ -19,6 +19,7 @@
  */
 import { useCallback, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { GalleryEditor } from '../components/gallery.tsx'
 import { Amount, Breakdown } from '../components/money.tsx'
 import { Badge } from '../components/status.tsx'
 import { Empty, Failed, Loading } from '../components/states.tsx'
@@ -111,7 +112,15 @@ export function SellPage() {
         {drafts.state === 'empty' && <Empty title="No drafts" hint="Everything you have listed is live or finished." />}
         {drafts.state === 'ok' &&
           (drafts.data?.listings ?? []).map((listing) => (
-            <DraftRow key={listing.id} listing={listing} onActivated={() => { drafts.reload(); live.reload() }} />
+            <DraftRow
+              key={listing.id}
+              listing={listing}
+              onActivated={() => {
+                drafts.reload()
+                live.reload()
+              }}
+              onDraftChanged={drafts.reload}
+            />
           ))}
       </section>
 
@@ -125,24 +134,7 @@ export function SellPage() {
         {live.state === 'ok' && (
           <ul className="mk-rows">
             {(live.data?.listings ?? []).map((listing) => (
-              <li key={listing.id} className="mk-rows__row">
-                <Link className="cf-num" to={listingPath(listing.id)}>
-                  {listing.itemUrn}
-                </Link>
-                <span>
-                  {(() => {
-                    const price = parseAmountOrNull(listing.price)
-                    return price === null ? (
-                      <span className="mk-absent">No price</span>
-                    ) : (
-                      <Amount value={price} assetCode={listing.assetCode} />
-                    )
-                  })()}
-                </span>
-                <Badge tone="good" label={LISTING_STATUS_COPY[listing.status] ?? listing.status} />
-                {listing.frozen && <Badge tone="warn" label="Under review" />}
-                <span className="mk-rows__when">{ageLabel(listing.createdAt) ?? 'unknown time'}</span>
-              </li>
+              <LiveRow key={listing.id} listing={listing} onChanged={live.reload} />
             ))}
           </ul>
         )}
@@ -153,7 +145,17 @@ export function SellPage() {
 
 /* ------------------------------------------------------------------ activation */
 
-function DraftRow({ listing, onActivated }: { listing: ListingView; onActivated: () => void }) {
+function DraftRow({
+  listing,
+  onActivated,
+  onDraftChanged,
+}: {
+  listing: ListingView
+  onActivated: () => void
+  /** Re-read the drafts after a gallery change. Separate from `onActivated`, which also re-reads
+   *  the LIVE list — a draft whose photograph changed has not gone anywhere. */
+  onDraftChanged: () => void
+}) {
   const intent = useIntent('activate')
   const [tx, setTx] = useState('')
   const [chain, setChain] = useState('ember')
@@ -217,7 +219,70 @@ function DraftRow({ listing, onActivated }: { listing: ListingView; onActivated:
         {busy ? 'Activating…' : 'Activate'}
       </button>
       {diagnosis && <ActivationNotice diagnosis={diagnosis} />}
+      {/*
+        A draft is where photographs are added, because a draft is the listing being composed — and
+        because there is no separate edit page on this surface. `onDraftChanged` re-reads the
+        drafts so the gallery this component is handed is the one the service now holds, rather
+        than a local copy that would drift the first time a write partially failed.
+      */}
+      <GalleryEditor
+        listingId={listing.id}
+        images={listing.images ?? []}
+        itemUrn={listing.itemUrn}
+        onChanged={onDraftChanged}
+      />
     </div>
+  )
+}
+
+/**
+ * One live listing of the seller's own, with its photographs editable in place.
+ *
+ * An ACTIVE listing's gallery is still the seller's to change — `micro-market` allows `draft` and
+ * `active` and refuses every other status, because a sold listing's photographs are part of the
+ * record of what was sold. So a seller who notices a badly-lit photograph after going live can
+ * replace it without cancelling and relisting, which would release the escrow and lose the
+ * listing's age and its bids.
+ *
+ * `onChanged` re-reads the seller's live listings rather than mutating a local copy: the service
+ * returns the resulting gallery on every write, but the ROW also carries a status and a frozen flag
+ * that a moderation case may have changed since this page loaded.
+ */
+function LiveRow({ listing, onChanged }: { listing: ListingView; onChanged: () => void }) {
+  const price = parseAmountOrNull(listing.price)
+  return (
+    <li className="mk-rows__row mk-rows__row--stacked">
+      <div className="mk-rows__line">
+        <Link className="cf-num" to={listingPath(listing.id)}>
+          {listing.itemUrn}
+        </Link>
+        <span>
+          {price === null ? (
+            <span className="mk-absent">No price</span>
+          ) : (
+            <Amount value={price} assetCode={listing.assetCode} />
+          )}
+        </span>
+        <Badge tone="good" label={LISTING_STATUS_COPY[listing.status] ?? listing.status} />
+        {listing.frozen && <Badge tone="warn" label="Under review" />}
+        <span className="mk-rows__when">{ageLabel(listing.createdAt) ?? 'unknown time'}</span>
+      </div>
+      {listing.frozen ? (
+        // The service refuses a gallery change on a frozen listing with a 403 `listing_frozen`, so
+        // the control is not offered. A button that can only fail is a button that teaches a seller
+        // the app is broken during the one moment they are already worried.
+        <p className="mk-note">
+          Photographs cannot be changed while this listing is under review.
+        </p>
+      ) : (
+        <GalleryEditor
+          listingId={listing.id}
+          images={listing.images ?? []}
+          itemUrn={listing.itemUrn}
+          onChanged={onChanged}
+        />
+      )}
+    </li>
   )
 }
 
