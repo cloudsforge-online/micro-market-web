@@ -194,7 +194,13 @@ function OrderBody({ order }: { order: OrderView }) {
               <dt>Seller</dt>
               <dd>{shortSubject(order.sellerSubject)}</dd>
               <dt>Quantity</dt>
-              <dd>{order.quantity}</dd>
+              {/*
+                `cf-num`, as on the listing page's own Quantity — this one was the odd column out.
+                `mk-facts--mono` gives every value here a monospaced face but says nothing about
+                figures, and the design system's tabular-numbers rule is what makes a quantity in
+                one order line up with the same field in the next when a reader flips between them.
+              */}
+              <dd className="cf-num">{order.quantity}</dd>
               <dt>How it was bought</dt>
               <dd>{order.source}</dd>
               <dt>Ledger entry</dt>

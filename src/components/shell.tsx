@@ -7,10 +7,12 @@
  * `current={PRODUCT}` marks Forge Market as the current entry in the switcher:
  * `ui/packages/ui/src/surfaces.ts:227` registers it as a product with `inSwitcher: true`.
  */
-import { CloudsForgeBar, CloudsForgeFooter } from '@cloudsforge/ui'
-import { NavLink, Outlet } from 'react-router-dom'
+import { useEffect } from 'react'
+import { CloudsForgeBar, CloudsForgeFooter, CookieBanner, MainRegion, SkipLink } from '@cloudsforge/ui'
+import { applyHead, surfaceMeta } from '@cloudsforge/ui/seo'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { PRODUCT } from '../lib/hosts.ts'
-import { NAV } from '../lib/routes.ts'
+import { NAV, ROUTES } from '../lib/routes.ts'
 import { useSession } from '../lib/auth.tsx'
 
 export function AppShell() {
@@ -18,9 +20,19 @@ export function AppShell() {
 
   return (
     <>
-      <a className="mk-skip" href="#main">
-        Skip to the listings
-      </a>
+      {/*
+        The skip link is the first focusable thing in the document, and it is now the SHARED one.
+        This surface wrote its own — an `.mk-skip` anchor reading "Skip to the listings", pointed at
+        `#main` — and the anchor was only half of what a skip link needs: a plain `<main>` is not
+        focusable, so in Chrome and Safari the fragment scrolled the page and left focus on the
+        link, and the next Tab went back into the bar. `MainRegion` below is the other half. It
+        sets `tabIndex={-1}` on the landmark, which is what actually moves focus into the page.
+
+        The wording goes from "Skip to the listings" to the shared "Skip to content" deliberately:
+        four of this app's six routes are not listings, so the old sentence was accurate on the
+        front page and wrong on Sell, Orders and Fees.
+      */}
+      <SkipLink />
       <CloudsForgeBar
         current={PRODUCT}
         account={account}
@@ -51,9 +63,14 @@ export function AppShell() {
           ))}
         </div>
       </nav>
-      <main className="mk-main" id="main">
+      <DocumentMeta />
+      {/*
+        `MainRegion` rather than a bare `<main>`: same landmark, same class, plus the `id` the
+        shared `SkipLink` points at and the `tabIndex={-1}` that makes the jump land focus here.
+      */}
+      <MainRegion className="mk-main">
         <Outlet />
-      </main>
+      </MainRegion>
       {/*
         The company footer, from @cloudsforge/ui, REPLACING the `mk-footer` this file used to
         write itself. The paragraph is kept verbatim as `note` — it is the sentence this surface
@@ -72,6 +89,77 @@ export function AppShell() {
           </>
         }
       />
+
+      {/*
+        Last in the document, and therefore last in the tab order. That is deliberate: the banner
+        is a dialog and is explicitly NOT modal, so a reader who came here to look at a listing can
+        look at it and answer afterwards. A consent banner that traps focus is the coercion the
+        regulation is about. It renders nothing at all until it knows this reader has not already
+        answered, and nothing on an origin where analytics would not report anyway — which is why
+        it does not appear under `pnpm dev`.
+      */}
+      <CookieBanner />
     </>
   )
+}
+
+/**
+ * The page title, description, Open Graph tags and canonical, kept in step with the address.
+ *
+ * A component in the shell rather than a hook each page calls, because the failure mode of the
+ * second shape is the page that forgets — and the page that forgets is the one added last, which
+ * is the one nobody has bookmarked and therefore the one nobody notices is titled with the
+ * previous page's title.
+ *
+ * Everything but the DOM write is `@cloudsforge/ui/seo`, which derives a surface's title and
+ * description from the registry rather than from a string typed here. The only thing this file
+ * decides is which of THIS app's routes the reader is on, and that is read off `ROUTES` rather
+ * than restated — `test/routes.test.ts` already fails the build when that table drifts from the
+ * router and from nginx, so deriving from it means the head cannot drift on its own.
+ *
+ * `index.html` keeps its static title and card. Those are what a link-preview fetcher that does
+ * not execute JavaScript gets, for every address; the tags written here are what a browser and
+ * every crawler that does execute it sees. That trade is inherited from the design system and is
+ * written out at the top of `seo.ts` rather than discovered later in a link preview.
+ */
+function DocumentMeta() {
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    applyHead(surfaceMeta(PRODUCT, pageMeta(pathname)), window.location.origin)
+  }, [pathname])
+
+  return null
+}
+
+/**
+ * A title for a route that has no navigation label.
+ *
+ * `listings` is the only one: `ROUTES` gives it `label: null` because the index already IS the
+ * list of listings, so there is nothing to put in the sub-nav — but `/listings/<id>` is the
+ * address people paste at each other, and it is the single most-shared page on this surface. A
+ * tab reading "Forge Market" for all of them is a browser session nobody can navigate.
+ */
+const UNLABELLED_TITLES: Readonly<Record<string, string>> = { listings: 'Listing' }
+
+/** What this address is, as far as the head is concerned. Derived from `ROUTES`, never restated. */
+function pageMeta(pathname: string): { title?: string; path: string; robots?: string } {
+  const segment = pathname.replace(/^\/+/, '').split('/')[0] ?? ''
+  // The index is the surface itself, and `surfaceMeta` refuses to title it "Forge Market — Forge
+  // Market" — passing no title is how it is told so.
+  if (segment === '') return { path: pathname }
+
+  const declared = ROUTES.find((route) => route.path === segment)
+  if (!declared) {
+    /*
+     * An address this app does not route. nginx answers it with a 404 status and this shell
+     * inside it, so the page a reader sees is NotFoundPage — and the head must say the same
+     * thing. `noindex` because a not-found page that invites indexing is how a broken link
+     * becomes a search result; `follow` because the links on it (Browse, Collections) are real.
+     */
+    return { title: 'Not found', path: pathname, robots: 'noindex, follow' }
+  }
+
+  const title = declared.label ?? UNLABELLED_TITLES[declared.path]
+  return title === undefined ? { path: pathname } : { title, path: pathname }
 }
