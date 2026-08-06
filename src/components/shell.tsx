@@ -5,7 +5,7 @@
  * that makes moving between surfaces feel like one application.
  *
  * `current={PRODUCT}` marks Forge Market as the current entry in the switcher:
- * `ui/packages/ui/src/surfaces.ts:227` registers it as a product with `inSwitcher: true`.
+ * `ui/packages/ui/src/surfaces.ts` registers it as a product with `inSwitcher: true`.
  */
 import { useEffect } from 'react'
 import { CloudsForgeBar, CloudsForgeFooter, CookieBanner, MainRegion, SkipLink } from '@cloudsforge/ui'

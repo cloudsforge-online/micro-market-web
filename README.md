@@ -42,7 +42,8 @@ one the service registers — three of them inside `micro-market` itself. Two ar
 
 Every suite involved was green, because a stubbed `fetch` answers whatever it is told to no matter
 what path it was asked for. So `test/market.test.ts` asserts the outgoing URL, method, query string,
-body and headers for every call in `src/lib/market.ts`, and CI greps for each cited line number.
+body and headers for every call in `src/lib/market.ts`, and CI requires every route to name the
+service source it was read from.
 
 ### The routes this app calls
 
@@ -115,7 +116,7 @@ activated, not just now."*
 
 ## An escrow is a reservation, not a balance
 
-`market/src/escrow.ts:1-13` — `hold_entry_id` is the journal entry that moved value from `available`
+`market/src/escrow.ts` — `hold_entry_id` is the journal entry that moved value from `available`
 to `reserved`. Market never adds anything up. So no screen here says Forge Market is holding your
 funds; it says there is a reservation in Forge Ledger and Market holds the reference to it.
 
@@ -133,7 +134,7 @@ smallest units and **labelled as such** rather than guessed at eighteen.
 
 ## Auctions have a clock, and a leading bid is not a price
 
-A late bid extends the close time (`bids.ts:250-261`), so the clock says so. An auction whose close
+A late bid extends the close time (`bids.ts`), so the clock says so. An auction whose close
 has passed but whose listing is still `active` is **"closing"**, not closed — `market` settles
 auctions by a sweep. `untilLabel` answers `null` rather than "0 min", so a closed auction can never
 read as live. And the reserve is off the wire on purpose (1190-1191) and checked at close, so the
@@ -160,7 +161,7 @@ leading bid is labelled a leading bid, every time, with the caveat beside it.
 ## Search is honest about its scope
 
 `micro-market` has no text-search route and the browse route passes no limit, so the answer is
-capped at 50 (`listings.ts:702`). The search box filters what that request returned, and the line
+capped at 50 (`listings.ts`). The search box filters what that request returned, and the line
 under it says so — because a filter that silently searches a fraction of the catalogue is how a
 buyer concludes an item is not for sale.
 

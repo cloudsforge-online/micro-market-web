@@ -11,16 +11,16 @@ import type { AccountState } from '@cloudsforge/ui'
 import { AUTH_EXPIRED_EVENT, clearTokens, hasSession, nimbus, signIn, signOut } from './api.ts'
 
 /**
- * What Nimbus answers at `GET /auth/me` — **`identity/src/server.ts:891-903`**.
+ * What Nimbus answers at `GET /auth/me` — **`identity/src/server.ts`**.
  *
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  * **THE PROFILE IS NESTED UNDER `user`, AND EVERY FRONTEND IN THIS ESTATE READS IT FLAT.**
  *
- * `server.ts:895-902` returns `{ user, session, organisations }`, where `user` is `toPublicUser`
- * (`identity/src/users.ts:52-63`): `{ id, email, emailVerifiedAt, handle, status, roles,
+ * `server.ts` returns `{ user, session, organisations }`, where `user` is `toPublicUser`
+ * (`identity/src/users.ts`): `{ id, email, emailVerifiedAt, handle, status, roles,
  * createdAt, lastSeenAt }`.
  *
- * `web-template/src/lib/auth.tsx:13-17` declares `interface Me { handle?, roles? }` at the TOP
+ * `web-template/src/lib/auth.tsx` declares `interface Me { handle?, roles? }` at the TOP
  * level and assigns `me?.handle` into the bar's account state. There is no `handle` at the top
  * level, so it is `undefined` in every app cut from that template — the account menu shows no
  * name and no roles for a signed-in user, and no type error is possible because both fields are
@@ -45,7 +45,7 @@ export interface Session {
   /**
    * The signed-in user's LEDGER SUBJECT — `user:<id>` — or null.
    *
-   * `market/src/server.ts:1293-1297` builds exactly this string from the token and compares
+   * `market/src/server.ts` builds exactly this string from the token and compares
    * listings and orders against it, so it is the value `?sellerSubject=` has to carry for the
    * seller's own listings to come back. Composed here, from the id Nimbus returns, rather than in
    * each page: a page that spelled it `user-<id>` would silently get an empty market.

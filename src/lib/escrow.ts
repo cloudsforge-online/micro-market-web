@@ -12,18 +12,18 @@
  *
  * The service is careful about this in three separate places, and this module is the fourth:
  *
- *   1. `market/src/server.ts:756-763` — activation of an `onchain` listing FAILS CLOSED. An
+ *   1. `market/src/server.ts` — activation of an `onchain` listing FAILS CLOSED. An
  *      unconfirmed escrow is a 409; it is never "list it anyway", because that is a listing for
  *      an item the seller can still transfer.
- *   2. `market/src/server.ts:467-475` — an unreachable indexer is a **503 `indexer_unavailable`**,
+ *   2. `market/src/server.ts` — an unreachable indexer is a **503 `indexer_unavailable`**,
  *      whose message is "the on-chain escrow could not be confirmed", not "is not confirmed".
- *   3. `market/src/server.ts:801-804` — the risk route puts `indicatorsAvailable` on the wire
+ *   3. `market/src/server.ts` — the risk route puts `indicatorsAvailable` on the wire
  *      explicitly, "or a broken indexer renders as a clean bill of health".
  *
  * ── And the second thing this module refuses to blur ──────────────────────────────────────────
  *
  * **AN ESCROW IS A REFERENCE TO A `micro-ledger` RESERVATION. IT IS NEVER A BALANCE.**
- * `market/src/escrow.ts:1-13`: `hold_entry_id` is the journal entry that moved value from
+ * `market/src/escrow.ts`: `hold_entry_id` is the journal entry that moved value from
  * `available` to `reserved`; market never adds anything up, and "if `amount` ever starts being
  * decremented in place, market has become a second ledger". So no screen in this app renders an
  * escrow as an amount held by Forge Market. It renders it as a reservation that exists, in the
@@ -69,12 +69,12 @@ export type EscrowKnowledge =
  * Read a listing's escrow honestly.
  *
  * The wire gives two facts and no more: `settlementMode` and `escrowed`, the latter being
- * `escrowId !== null || onchainEscrowTx !== null` (`market/src/server.ts:1200`). It does NOT
+ * `escrowId !== null || onchainEscrowTx !== null` (`market/src/server.ts`). It does NOT
  * carry a confirmation flag, so the only sound inference about the chain is the one the service's
  * own fail-closed rule licenses:
  *
  *   an `onchain` listing reached `active` **only** by passing `escrowStatus().confirmed`
- *   (`server.ts:757-763`). So `active` + `onchain` + `escrowed` means the escrow WAS confirmed,
+ *   (`server.ts`). So `active` + `onchain` + `escrowed` means the escrow WAS confirmed,
  *   at activation.
  *
  * That is a statement about a past observation and is worded as one. It is not a claim that the
@@ -130,9 +130,9 @@ export function escrowKnowledge(listing: ListingView): EscrowKnowledge {
  * **This is the distinction the whole file is for.** `micro-market` answers the two cases with
  * two different codes, and they are not interchangeable:
  *
- *   * `indexer_unavailable` (503, `server.ts:467-475`) — the chain index did not answer. We know
+ *   * `indexer_unavailable` (503, `server.ts`) — the chain index did not answer. We know
  *     nothing about the escrow. The remedy is to wait.
- *   * `state_conflict` (409) carrying the escrow message (`server.ts:762`) — the chain index
+ *   * `state_conflict` (409) carrying the escrow message (`server.ts`) — the chain index
  *     answered, and the escrow is not confirmed. The remedy is to post it, or wait for the chain.
  *
  * Anything else is neither, and is never reported as either. A network failure (`ApiError` with
@@ -157,7 +157,7 @@ export interface ActivationDiagnosis {
   readonly requestId: string | undefined
 }
 
-/** The 409 message the activate route raises for an unconfirmed escrow — `server.ts:762`. */
+/** The 409 message the activate route raises for an unconfirmed escrow — `server.ts`. */
 const NOT_CONFIRMED = /escrow is not confirmed/i
 
 export function diagnoseActivation(err: unknown): ActivationDiagnosis {
@@ -230,7 +230,7 @@ export function diagnoseActivation(err: unknown): ActivationDiagnosis {
 /**
  * The same distinction, one level out: indicators we have, versus indicators we could not fetch.
  *
- * `GET /v1/listings/:id/risk` fails OPEN and answers 200 either way (`server.ts:790-814`), so the
+ * `GET /v1/listings/:id/risk` fails OPEN and answers 200 either way (`server.ts`), so the
  * status code carries none of this. `indicatorsAvailable` does, and a caller that ignores it
  * renders a broken indexer as a clean bill of health — which is exactly the sentence the service
  * wrote next to that field.
@@ -267,7 +267,7 @@ export function riskKnowledge(risk: RiskView | null): RiskKnowledge {
   }
 }
 
-/** The sentence for each indicator code — `market/src/risk.ts:34-41` is the closed set. */
+/** The sentence for each indicator code — `market/src/risk.ts` is the closed set. */
 export const INDICATOR_COPY: Readonly<Record<string, string>> = Object.freeze({
   mint_authority_present: 'The mint authority is still held, so more of this token can be created.',
   ownership_not_renounced: 'Contract ownership has not been renounced.',

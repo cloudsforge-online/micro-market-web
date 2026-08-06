@@ -5,16 +5,16 @@
  * **A SALE IS A PARTITION OF THE PRICE, AND THIS FILE IS WHERE THE UI EITHER KEEPS THAT OR
  * BREAKS IT.**
  *
- * `market/src/money.ts:150-186` divides a price into the platform fee, the royalty and the
+ * `market/src/money.ts` divides a price into the platform fee, the royalty and the
  * seller's proceeds, and defines the proceeds as the REMAINDER so that
  * `fee + royalty + proceeds === price` exactly, for every price and every pair of rates. It
- * asserts that on every split (`assertPartition`, money.ts:195-212) rather than trusting it.
+ * asserts that on every split (`assertPartition`, money.ts) rather than trusting it.
  *
  * A frontend that recomputes any of those three with a float, or renders them rounded
  * independently, is the place that arithmetic stops being true — and it is the place a seller
  * actually reads it. So:
  *
- *   * Amounts arrive as decimal STRINGS of smallest units (`market/src/server.ts:1185-1189`,
+ *   * Amounts arrive as decimal STRINGS of smallest units (`market/src/server.ts`,
  *     `1213-1218`: "Every amount a decimal STRING. A JSON number is an IEEE 754 double") and are
  *     parsed to `bigint` here, once.
  *   * `splitSale` below is a port of the service's, remainder-defined and largest-remainder
@@ -28,19 +28,19 @@
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  */
 
-/** Basis points. 10,000 = 100%. `market/src/money.ts:31`. */
+/** Basis points. 10,000 = 100%. `market/src/money.ts`. */
 export const BPS_SCALE = 10_000n
 
 /**
  * How many smallest units make one unit of each asset.
  *
- * From `contracts/packages/chain/src/index.ts:49-121` (the `CHAINS` record) and
- * `contracts/packages/money/src/index.ts:69` for USD. Restated rather than imported because this
+ * From `contracts/packages/chain/src/index.ts` (the `CHAINS` record) and
+ * `contracts/packages/money/src/index.ts` for USD. Restated rather than imported because this
  * bundle does not depend on `@cloudsforge/contracts` — and restated with its source cited, so the
  * day a decimal changes there is one grep that finds this copy.
  *
  * A `TOKEN:<address>` asset is deliberately ABSENT. Its decimals are chosen at deploy time and
- * nothing in this bundle knows them (`contracts/packages/money/src/index.ts:82-93` refuses to
+ * nothing in this bundle knows them (`contracts/packages/money/src/index.ts` refuses to
  * guess), so an amount in one is rendered in smallest units and labelled as such. Guessing 18
  * would show a whole token as a thousandth of one.
  */
@@ -51,15 +51,16 @@ export const ASSET_DECIMALS: Readonly<Record<string, number>> = Object.freeze({
   BTC: 8,
   XRP: 6,
   USD: 2,
-  // One Shard is one US cent, and it is an integer: `contracts/packages/chain/src/index.ts:264`,
-  // inside the `CHAINS.SHARD` spec at :260-266. The old citation here was `:112-120`, which today
-  // is an unrelated explorer-link type — SHARD was retired in place on 2026-08-04 (`RETIRED_ASSETS`,
-  // ibid. :58) and the spec moved down the file.
+  // One Shard is one US cent, and it is an integer: the `CHAINS.SHARD` spec in
+  // `contracts/packages/chain/src/index.ts`. This comment used to cite that spec by LINE, and the
+  // line it named had already become an unrelated explorer-link type — SHARD was retired in place
+  // on 2026-08-04 (`RETIRED_ASSETS`, same file) and the spec moved down the file. Cite the symbol;
+  // the symbol moves with the code and a line number does not.
   //
   // The ZERO IS STILL CORRECT AND MUST STAY. Retired is not removed: 121 accounts still hold real
   // Shard liability, and the contract package says of this very field that "`decimals: 0` in
   // particular is load-bearing, because it is the only thing that says a stored `250` means 250
-  // Shards and not 250 wei" (ibid. :255-259). Deleting the row to "finish the migration" would
+  // Shards and not 250 wei" (ibid.). Deleting the row to "finish the migration" would
   // rescale every stored Shard amount by 10¹⁸ silently.
   SHARD: 0,
 })
@@ -72,7 +73,7 @@ export class AmountError extends RangeError {
 }
 
 /**
- * A decimal string of smallest units, parsed strictly. Mirrors `market/src/money.ts:222-227`.
+ * A decimal string of smallest units, parsed strictly. Mirrors `market/src/money.ts`.
  *
  * The same regular expression, on purpose: an input this refuses is an input the service would
  * have refused, and catching it here saves a round trip and shows the reader why. Anything else —
@@ -96,7 +97,7 @@ export function parseAmountOrNull(value: unknown): bigint | null {
 }
 
 /**
- * `amount × bps / 10000`, rounded DOWN. `market/src/money.ts:47-53`.
+ * `amount × bps / 10000`, rounded DOWN. `market/src/money.ts`.
  *
  * Down, always, and in the platform's disfavour on purpose: rounding a fee up takes a unit from a
  * customer that no rate entitles the platform to.
@@ -112,7 +113,7 @@ export function bpsOf(amount: bigint, bps: number): bigint {
 /**
  * Split `total` between weighted recipients so the shares sum to `total` EXACTLY.
  *
- * Largest remainder (Hamilton), tie-broken by index — a port of `market/src/money.ts:68-113`.
+ * Largest remainder (Hamilton), tie-broken by index — a port of `market/src/money.ts`.
  * Flooring each share independently loses up to N−1 units, and on the screen that is a royalty
  * table whose rows do not add up to the royalty above them.
  */
@@ -187,7 +188,7 @@ export interface SaleSplit {
 /**
  * Divide a sale price into the platform's fee, the royalty, and what the seller is left with.
  *
- * A port of `market/src/money.ts:150-186`, including its two refusals: a fee plus a royalty at or
+ * A port of `market/src/money.ts`, including its two refusals: a fee plus a royalty at or
  * above 100% leaves the seller nothing, and a non-zero royalty with no recipients is an entry
  * that cannot balance. Both are refused HERE, before a create-listing form can submit them,
  * because the alternative is a 400 whose message the reader has to translate back into the field
@@ -231,7 +232,7 @@ export function splitSale(terms: SaleTerms): SaleSplit {
 /**
  * The invariant, as a question rather than an exception.
  *
- * `market/src/money.ts:195-212` throws, because an unbalanced entry must never reach the ledger.
+ * `market/src/money.ts` throws, because an unbalanced entry must never reach the ledger.
  * Here it RETURNS the sentence instead, so a component that is rendering numbers the service
  * computed can check them and say what is wrong on screen. A frontend that threw would show a
  * blank page for an order whose figures a support conversation is about to need.
@@ -256,7 +257,7 @@ export function checkPartition(split: SaleSplit): string | null {
   return null
 }
 
-/** The minimum a bid must reach to displace `current`. `market/src/money.ts:230-232`. */
+/** The minimum a bid must reach to displace `current`. `market/src/money.ts`. */
 export function minimumBid(current: bigint | null, startingPrice: bigint): bigint {
   return current === null ? startingPrice : current + 1n
 }

@@ -63,7 +63,7 @@ export function MaybeAmount({
 /**
  * A sale split, with its sum.
  *
- * The sum row is not decoration. It is the assertion `market/src/money.ts:195-212` makes on the
+ * The sum row is not decoration. It is the assertion `market/src/money.ts` makes on the
  * server, made again where a seller reads it — and when it fails, the failure is the loudest thing
  * on the panel rather than an exception that blanks the page.
  */

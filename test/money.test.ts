@@ -31,7 +31,7 @@ import {
   splitSale,
 } from '../src/lib/money.ts'
 
-describe('parseAmount — market/src/money.ts:222-227', () => {
+describe('parseAmount — market/src/money.ts', () => {
   it('parses a decimal string of smallest units', () => {
     assert.equal(parseAmount('0'), 0n)
     assert.equal(parseAmount('1000'), 1000n)
@@ -70,7 +70,7 @@ describe('parseAmount — market/src/money.ts:222-227', () => {
   })
 })
 
-describe('bpsOf — market/src/money.ts:47-53', () => {
+describe('bpsOf — market/src/money.ts', () => {
   it('rounds DOWN, in the platform’s disfavour', () => {
     // 1001 × 250 / 10000 = 25.025. Rounding up would take a unit no rate entitles us to.
     assert.equal(bpsOf(1001n, 250), 25n)
@@ -96,7 +96,7 @@ describe('bpsOf — market/src/money.ts:47-53', () => {
   })
 })
 
-describe('allocate — largest remainder, market/src/money.ts:68-113', () => {
+describe('allocate — largest remainder, market/src/money.ts', () => {
   it('sums to the total exactly, where flooring each share would not', () => {
     // 10 across three equal recipients: 3 + 3 + 3 = 9 by flooring. One unit would be lost.
     const shares = allocate(10n, [1, 1, 1])
@@ -141,7 +141,7 @@ describe('allocate — largest remainder, market/src/money.ts:68-113', () => {
   })
 })
 
-describe('splitSale — the partition, market/src/money.ts:150-186', () => {
+describe('splitSale — the partition, market/src/money.ts', () => {
   const terms = (price: bigint, feeBps = 250, royaltyBps = 750) => ({
     price,
     platformFeeBps: feeBps,
@@ -265,7 +265,7 @@ describe('checkPartition — the assertion, returned rather than thrown', () => 
   })
 })
 
-describe('minimumBid — market/src/money.ts:230-232', () => {
+describe('minimumBid — market/src/money.ts', () => {
   it('is the starting price when there is no leader', () => {
     assert.equal(minimumBid(null, 1000n), 1000n)
   })
@@ -335,7 +335,7 @@ describe('formatMoney — the unit is never optional', () => {
   })
 
   it('does NOT guess the decimals of a TOKEN: asset', () => {
-    // `contracts/packages/money/src/index.ts:82-93` refuses to guess, because decimals are chosen
+    // `contracts/packages/money/src/index.ts` refuses to guess, because decimals are chosen
     // at deploy time. Guessing 18 would show a whole token as a thousandth of one, and nothing
     // about the screen would look wrong.
     const rendered = formatMoney(1_000_000_000_000_000_000n, 'TOKEN:0xabc')

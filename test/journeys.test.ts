@@ -75,7 +75,7 @@ const listingAt = (path = `/listings/${fx.LISTING_ID}`) => page(h(ListingPage), 
  * The sell page's three reads.
  *
  * `/sell` asks for its drafts and its live listings as two separate requests — `status=draft` and
- * `status=active` (`src/pages/sell.tsx:57-74`) — so the stub answers them from the query rather
+ * `status=active` (`src/pages/sell.tsx`) — so the stub answers them from the query rather
  * than returning one body to both, which would render the same listing in both panels and let a
  * scenario pass against a page that had confused them.
  */
@@ -103,15 +103,15 @@ describe('BJ-MKT — Forge Market', () => {
    *
    * BJ-MKT-01's row reads: "the filter set offered is exactly the four the route reads, and there
    * is **no search box** — the route reads no text query, and a box that filtered fifty rows
-   * client-side would imply an index that is not there (`market-web/src/pages/browse.tsx:3-6`)".
+   * client-side would imply an index that is not there (`market-web/src/pages/browse.tsx`)".
    *
-   * The citation is right and the conclusion drawn from it is not. `browse.tsx:3-6` says: "the
+   * The citation is right and the conclusion drawn from it is not. `browse.tsx` says: "the
    * route reads four filters and no text query and no page size, so a search box here filters
    * fifty listings rather than searching a catalogue. `searchScopeNote` says which, every time."
-   * That is not "there is no box". There IS one — `<form role="search">` at `browse.tsx:64`, an
+   * That is not "there is no box". There IS one — `<form role="search">` at `browse.tsx`, an
    * `<input type="search">` labelled "Filter these listings" — and the countermeasure against the
    * implied index is a sentence rendered beside every result count
-   * (`src/lib/search.ts:113-125`): "This filters what is on this page rather than searching the
+   * (`src/lib/search.ts`): "This filters what is on this page rather than searching the
    * whole market — Forge Market has no text-search route."
    *
    * Asserting doc 22's literal wording would fail correct code, and a guard that fails on correct
@@ -135,7 +135,7 @@ describe('BJ-MKT — Forge Market', () => {
         for (const l of listings) assert.ok(s.text().includes(l.itemUrn), `${l.itemUrn} has no row`)
 
         // The request carried none of the parameters the route would silently ignore. `limit` and
-        // `q` are not read (`src/lib/market.ts:289-293`), and a client that sent one would believe
+        // `q` are not read (`src/lib/market.ts`), and a client that sent one would believe
         // it had asked for something it did not get.
         const sent = s.api.matching('GET /v1/listings')[0]
         assert.ok(sent, 'the browse page made no request')
@@ -212,7 +212,7 @@ describe('BJ-MKT — Forge Market', () => {
       async (s) => {
         const asked = s.api.matching('GET /v1/listings')[0]
         assert.ok(asked)
-        // `status` is OMITTED so the route's own default of `active` applies (server.ts:624).
+        // `status` is OMITTED so the route's own default of `active` applies (server.ts).
         // Asking for drafts here would be showing sellers' unpublished work to buyers, and
         // sending `status=` empty would ask for a status no row has.
         assert.doesNotMatch(asked.path, /status=/)
@@ -319,13 +319,13 @@ describe('BJ-MKT — Forge Market', () => {
         assert.ok(posted.length >= 1, 'the Buy button sent nothing')
         // The assertion doc 22 makes: ONE key across every attempt of one intent. Whether the
         // button also guards itself with `busy` is this app's business; the key is the contract,
-        // and `market/src/server.ts:1168-1173` collapses the duplicates on the strength of it.
+        // and `market/src/server.ts` collapses the duplicates on the strength of it.
         const keys = new Set(posted.map((p) => p.headers['idempotency-key']))
         assert.equal(
           keys.size,
           1,
           `two clicks on one intent sent ${keys.size} idempotency keys: ${[...keys].join(', ')}. ` +
-            `A key minted per fetch means two clicks are two orders — src/lib/idempotency.ts:12-16.`,
+            `A key minted per fetch means two clicks are two orders — src/lib/idempotency.ts.`,
         )
         assert.match([...keys][0] ?? '', /^market-web:buy:/)
       },
@@ -473,8 +473,8 @@ describe('BJ-MKT — Forge Market', () => {
     })
     const conflict = await said({
       status: 409,
-      // The service's own sentence, not an invented one: `market/src/server.ts:1465` composes
-      // exactly this, and `src/lib/escrow.ts:161` matches on it. A fixture that paraphrased would
+      // The service's own sentence, not an invented one: `market/src/server.ts` composes
+      // exactly this, and `src/lib/escrow.ts` matches on it. A fixture that paraphrased would
       // take the `other_conflict` branch and this scenario would assert the wrong screen.
       body: fx.error(
         'state_conflict',
@@ -526,13 +526,13 @@ describe('BJ-MKT — Forge Market', () => {
         // The two facts that ARE visible to the parties.
         assert.match(text, /proceeds/i)
         assert.match(text, /frozen/i)
-        // And the honest limit. `GET /v1/disputes` requires an operator (server.ts:1017), so this
+        // And the honest limit. `GET /v1/disputes` requires an operator (server.ts), so this
         // surface cannot read the dispute's state back and must not imply that it can.
         assert.match(
           text,
           /we cannot show you its progress here/i,
           'the page invented a dispute status. GET /v1/disputes needs an operator ' +
-            '(market/src/server.ts:1017), so this surface cannot read one back.',
+            '(market/src/server.ts), so this surface cannot read one back.',
         )
       },
     )
@@ -554,7 +554,7 @@ describe('BJ-MKT — Forge Market', () => {
           writes.map((w) => `${w.method} ${w.path}`),
           [],
           'opening an order wrote something. A re-POST under the old key to scrape the stored ' +
-            'response is a write dressed up as a read — src/pages/orders.tsx:16-18.',
+            'response is a write dressed up as a read — src/pages/orders.tsx.',
         )
       },
     )
@@ -638,7 +638,7 @@ describe('BJ-MKT — Forge Market', () => {
           s.text(),
           /a leading bid is not a final price/i,
           'the leading-bid figure is rendered without the caveat that goes beside it every time ' +
-            '(src/lib/auction.ts:148-150)',
+            '(src/lib/auction.ts)',
         )
         s.before(
           'Leading bid',
@@ -1115,7 +1115,7 @@ describe('BJ-A11Y — accessibility', () => {
           assert.ok(
             s.textOf(chip).length > 0,
             `a chip rendered with no text: ${chip.outerHTML.slice(0, 120)}. Colour is never the ` +
-              `only channel — ui/packages/ui/src/surfaces.ts:73.`,
+              `only channel — ui/packages/ui/src/surfaces.ts.`,
           )
         }
       },

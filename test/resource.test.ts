@@ -4,13 +4,13 @@
  * It had no test of its own. That was found by mutation: reordering its first two lines so that
  * `loading` is checked before `error` left the whole suite green, because `useResource` happens
  * never to hold both at once (`setLoading(true)` and `setError(null)` are batched in the same
- * effect). The ordering is still the rule — `src/lib/resource.ts:14-20`, "FAILURE OUTRANKS
+ * effect). The ordering is still the rule — `src/lib/resource.ts`, "FAILURE OUTRANKS
  * EMPTINESS, in both directions" — and a rule stated in a comment with nothing asserting it is a
  * rule the next refactor reorders for tidiness.
  *
  * These are pure-function tests, so they are here rather than in the DOM harness: `test/dom.ts`
  * exists for scenarios that need a document, and putting one under a function is pure cost
- * (`test/browser-stubs.ts:4-8`).
+ * (`test/browser-stubs.ts`).
  */
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'

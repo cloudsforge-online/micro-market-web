@@ -143,7 +143,7 @@ describe('the router', () => {
   })
 
   it('DOES gate the two routes that cannot render without a session', () => {
-    // `GET /v1/orders` derives the subject from the token (market/src/server.ts:972). Without one
+    // `GET /v1/orders` derives the subject from the token (market/src/server.ts). Without one
     // there is nothing to show but a wall of failures.
     for (const path of ['sell', 'orders/*']) {
       const at = appSource.indexOf(`path="${path}"`)

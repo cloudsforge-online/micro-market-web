@@ -14,20 +14,21 @@
  *     routes at all, takes the action in the body, and registers `market.listing.create`. The
  *     failure was reported as the moderation gate being BYPASSED; it was the opposite —
  *     `peerDecided` is true for any 4xx, so the 404 landed on the `deny` branch and
- *     `market/src/server.ts:678` turned it into a 403. **Every listing creation returned 403.**
+ *     `market/src/server.ts` turned it into a 403. **Every listing creation returned 403.**
  *
- * Every path below carries the line of `market/src/server.ts` it is declared on, read out of
- * `buildRoutes()` (server.ts:485-1130), which is the only place a route is declared in that
- * service. `test/market.test.ts` asserts the REQUEST — path, method, query string, body, and
+ * Every path below names `market/src/server.ts`, read out of `buildRoutes()`, which is the only
+ * place a route is declared in that service. It names the FILE and not a line in it: a line names a
+ * position in a file micro-market owns and is free to edit, and half the numbers this header used
+ * to carry had already drifted onto unrelated code. `test/market.test.ts` asserts the REQUEST — path, method, query string, body, and
  * headers — for every call in this file, because a test that stubs `fetch` and checks the parsed
  * response passes just as happily against a path that does not exist.
  *
  * ── Two things about this service's shape, both easy to get wrong ─────────────────────────────
  *
- * 1. **EVERY MUTATING ROUTE REQUIRES `Idempotency-Key`** (server.ts:1152-1157). Not optional.
+ * 1. **EVERY MUTATING ROUTE REQUIRES `Idempotency-Key`** (server.ts). Not optional.
  *    A request without one is a 400 before anything else happens. See `idempotency.ts`.
  * 2. **A mutating route answers 201 on the first attempt and 200 with `replayed: true` on a
- *    replay** (server.ts:1168-1173). `replayed` is not an error; it is how a client tells "I
+ *    replay** (server.ts). `replayed` is not an error; it is how a client tells "I
  *    created this" from "this already existed", and translating it into a failure is how a
  *    completed purchase gets reported to a customer as a broken one.
  * ══════════════════════════════════════════════════════════════════════════════════════════════
@@ -37,7 +38,7 @@ import { idempotentHeaders } from './idempotency.ts'
 
 /* ------------------------------------------------------------------ the domain, as it is sent */
 
-/** `AssetKind` — `market/src/listings.ts:53-59`, and the set `server.ts:243-250` validates. */
+/** `AssetKind` — `market/src/listings.ts`, and the set `server.ts` validates. */
 export type AssetKind =
   | 'token'
   | 'game_item'
@@ -55,15 +56,15 @@ export const ASSET_KINDS: readonly AssetKind[] = [
   'collectible',
 ]
 
-/** `PricingMode` — `listings.ts:60`, validated at `server.ts:251`. */
+/** `PricingMode` — `listings.ts`, validated at `server.ts`. */
 export type PricingMode = 'fixed' | 'auction' | 'offers_only'
 export const PRICING_MODES: readonly PricingMode[] = ['fixed', 'auction', 'offers_only']
 
-/** `SettlementMode` — `listings.ts:61`, validated at `server.ts:252`. */
+/** `SettlementMode` — `listings.ts`, validated at `server.ts`. */
 export type SettlementMode = 'custodial' | 'onchain'
 export const SETTLEMENT_MODES: readonly SettlementMode[] = ['custodial', 'onchain']
 
-/** `ListingStatus` — `listings.ts:62`. The browse route defaults to `active` (server.ts:624). */
+/** `ListingStatus` — `listings.ts`. The browse route defaults to `active` (server.ts). */
 export type ListingStatus = 'draft' | 'active' | 'settling' | 'sold' | 'cancelled' | 'expired'
 export const LISTING_STATUSES: readonly ListingStatus[] = [
   'draft',
@@ -74,10 +75,10 @@ export const LISTING_STATUSES: readonly ListingStatus[] = [
   'expired',
 ]
 
-/** `VerificationLevel` — `listings.ts:63`, validated at `server.ts:253-258`. */
+/** `VerificationLevel` — `listings.ts`, validated at `server.ts`. */
 export type VerificationLevel = 'unverified' | 'claimed' | 'verified' | 'flagged'
 
-/** `IndicatorCode` — the closed set at `market/src/risk.ts:34-41`. */
+/** `IndicatorCode` — the closed set at `market/src/risk.ts`. */
 export type IndicatorCode =
   | 'mint_authority_present'
   | 'ownership_not_renounced'
@@ -87,16 +88,16 @@ export type IndicatorCode =
   | 'few_holders'
 
 /**
- * One listing, exactly as `listingWire` emits it — `market/src/server.ts:1178-1203`.
+ * One listing, exactly as `listingWire` emits it — `market/src/server.ts`.
  *
- * Mirrored narrowly on purpose. **The reserve price is NOT on the wire** (server.ts:1190-1191:
+ * Mirrored narrowly on purpose. **The reserve price is NOT on the wire** (server.ts:
  * "It is the seller's secret floor, and publishing it would tell every bidder exactly what to
  * bid"), and adding a `reservePrice` field here would produce `undefined` at runtime with no type
  * error at all — which is how a UI comes to render a seller's floor as blank rather than as
  * absent.
  *
  * `escrowed` is a boolean over two different facts: `escrowId !== null || onchainEscrowTx !== null`
- * (server.ts:1200). It says an escrow reference EXISTS. It does not say the chain confirmed it,
+ * (server.ts). It says an escrow reference EXISTS. It does not say the chain confirmed it,
  * and `src/lib/escrow.ts` is where that distinction is kept.
  */
 export interface ListingView {
@@ -105,7 +106,7 @@ export interface ListingView {
   readonly collectionId: string | null
   readonly assetKind: AssetKind
   readonly itemUrn: string
-  /** Smallest units, decimal string. Never a JSON number — server.ts:1185-1187. */
+  /** Smallest units, decimal string. Never a JSON number — server.ts. */
   readonly quantity: string
   readonly itemAssetCode: string
   readonly pricingMode: PricingMode
@@ -118,7 +119,7 @@ export interface ListingView {
   readonly auctionEndsAt: string | null
   readonly expiresAt: string | null
   readonly status: ListingStatus
-  /** Frozen by a moderation case or by an open dispute — `market/src/moderation.ts:383`. */
+  /** Frozen by a moderation case or by an open dispute — `market/src/moderation.ts`. */
   readonly frozen: boolean
   /** An escrow reference exists. NOT "the chain confirmed it". See `escrow.ts`. */
   readonly escrowed: boolean
@@ -164,7 +165,7 @@ export interface ListingImageView {
   readonly bytesUrl: string | null
 }
 
-/** The royalty split as `GET /v1/listings/:id` returns it — `server.ts:643-646`. Bps, not amounts. */
+/** The royalty split as `GET /v1/listings/:id` returns it — `server.ts`. Bps, not amounts. */
 export interface RoyaltySplitEntry {
   readonly subject: string
   readonly bps: number
@@ -182,7 +183,7 @@ export interface ListingDetail {
   readonly images?: readonly ListingImageView[]
 }
 
-/** `Verification` — `market/src/listings.ts:216-222`. `reviewedAt` is an ISO string on the wire. */
+/** `Verification` — `market/src/listings.ts`. `reviewedAt` is an ISO string on the wire. */
 export interface VerificationView {
   readonly subjectUrn: string
   readonly level: VerificationLevel
@@ -191,7 +192,7 @@ export interface VerificationView {
   readonly reviewedAt: string | null
 }
 
-/** One computed risk indicator — `market/src/risk.ts:46-53`. */
+/** One computed risk indicator — `market/src/risk.ts`. */
 export interface Indicator {
   readonly code: IndicatorCode
   /** True when the condition HOLDS. A false indicator is still shown: absence is information. */
@@ -201,9 +202,9 @@ export interface Indicator {
 }
 
 /**
- * `GET /v1/listings/:id/risk` — `server.ts:790-814`.
+ * `GET /v1/listings/:id/risk` — `server.ts`.
  *
- * `indicatorsAvailable` is the whole point of this shape. server.ts:801-804: "Said explicitly
+ * `indicatorsAvailable` is the whole point of this shape. server.ts: "Said explicitly
  * rather than inferred from an empty array. 'We have no indicators' and 'we could not fetch them'
  * must not look the same to a client, or a broken indexer renders as a clean bill of health."
  *
@@ -216,7 +217,7 @@ export interface RiskView {
   readonly indicatorsAvailable: boolean
 }
 
-/** One bid, as `server.ts:851-858` emits it. */
+/** One bid, as `server.ts` emits it. */
 export interface BidView {
   readonly id: string
   readonly bidderSubject: string
@@ -226,7 +227,7 @@ export interface BidView {
   readonly placedAt: string
 }
 
-/** One offer — `offerWire`, `server.ts:1232-1252`. */
+/** One offer — `offerWire`, `server.ts`. */
 export interface OfferView {
   readonly id: string
   readonly listingId: string
@@ -238,7 +239,7 @@ export interface OfferView {
   readonly createdAt: string
 }
 
-/** One royalty payment on a settled order — `orderWire`, `server.ts:1225-1228`. */
+/** One royalty payment on a settled order — `orderWire`, `server.ts`. */
 export interface OrderRoyalty {
   readonly subject: string
   /** Smallest units, decimal string. */
@@ -246,10 +247,10 @@ export interface OrderRoyalty {
 }
 
 /**
- * One order — `orderWire`, `market/src/server.ts:1205-1230`.
+ * One order — `orderWire`, `market/src/server.ts`.
  *
  * `amount`, `feeAmount`, `royaltyAmount` and `sellerProceeds` are a PARTITION: the last three sum
- * to the first, exactly, by construction (`market/src/money.ts:150-186`). `src/lib/money.ts`
+ * to the first, exactly, by construction (`market/src/money.ts`). `src/lib/money.ts`
  * checks that here rather than assuming it, and the order page shows the sum.
  *
  * There is no dispute field on this shape. See `disputeReadableBy` below.
@@ -270,26 +271,26 @@ export interface OrderView {
   readonly journalEntryId: string | null
   readonly outboundTransactionId: string | null
   readonly source: 'purchase' | 'auction' | 'offer'
-  /** `held` until the dispute window runs — `market/src/orders.ts:109`. */
+  /** `held` until the dispute window runs — `market/src/orders.ts`. */
   readonly proceedsState: 'held' | 'released'
   readonly payoutDueAt: string | null
   readonly settledAt: string
   readonly royalties: readonly OrderRoyalty[]
 }
 
-/** One dispute — `disputeWire`, `server.ts:1254-1272`. */
+/** One dispute — `disputeWire`, `server.ts`. */
 export interface DisputeView {
   readonly id: string
   readonly orderId: string
   readonly raiserSubject: string
   readonly reason: string
-  /** `DisputeState` — `market/src/moderation.ts:53`. */
+  /** `DisputeState` — `market/src/moderation.ts`. */
   readonly state: 'open' | 'resolved_refunded' | 'resolved_upheld' | 'withdrawn'
   readonly resolutionEntryId: string | null
   readonly openedAt: string
 }
 
-/** One collection — `market/src/listings.ts:153-166`, returned unmapped by `server.ts:596-600`. */
+/** One collection — `market/src/listings.ts`, returned unmapped by `server.ts`. */
 export interface CollectionView {
   readonly id: string
   readonly ownerSubject: string
@@ -299,7 +300,7 @@ export interface CollectionView {
   readonly royalties: readonly RoyaltySplitEntry[]
 }
 
-/** Policy's verdict, echoed on a created listing — `server.ts:736`. */
+/** Policy's verdict, echoed on a created listing — `server.ts`. */
 export interface PolicyVerdict {
   readonly decision: string
   readonly reasons: readonly string[]
@@ -310,9 +311,9 @@ export interface PolicyVerdict {
 /* ------------------------------------------------------------------ reads */
 
 /**
- * `GET /v1/collections` — **`market/src/server.ts:596`**.
+ * `GET /v1/collections` — **`market/src/server.ts`**.
  *
- * The only query parameter the route reads is `ownerSubject` (server.ts:597). Public: no bearer
+ * The only query parameter the route reads is `ownerSubject` (server.ts). Public: no bearer
  * token is attached, because a collection is a shopfront and a shopfront behind a login is not one.
  */
 export async function listCollections(
@@ -327,18 +328,18 @@ export async function listCollections(
 }
 
 /**
- * `GET /v1/listings` — **`market/src/server.ts:618`**.
+ * `GET /v1/listings` — **`market/src/server.ts`**.
  *
- * The route reads exactly four parameters, and nothing else: `status` (server.ts:619),
+ * The route reads exactly four parameters, and nothing else: `status` (server.ts),
  * `assetKind` (620), `sellerSubject` (626) and `collectionId` (629).
  *
- * **There is no `limit` and no `q`.** `listListings` accepts a limit (`listings.ts:702`) but the
+ * **There is no `limit` and no `q`.** `listListings` accepts a limit (`listings.ts`) but the
  * ROUTE never passes one, so the page size is the function's default of 50 and a `limit=` on the
  * query string would be silently ignored — which is worse than a 400, because the client would
  * believe it had asked. Text search is done in this bundle over what the route returned; see
  * `search.ts`, which says so on screen rather than implying the whole market was searched.
  *
- * `status` is OMITTED rather than sent empty when it is not wanted: `server.ts:624` reads
+ * `status` is OMITTED rather than sent empty when it is not wanted: `server.ts` reads
  * `status ?? 'active'`, so an empty string becomes a status no row has and the browse page would
  * render as an empty market.
  */
@@ -370,26 +371,26 @@ export async function listListings(
 }
 
 /**
- * `GET /v1/listings/:id` — **`market/src/server.ts:636`**.
+ * `GET /v1/listings/:id` — **`market/src/server.ts`**.
  *
- * Returns the listing AND its royalty split in basis points (server.ts:641-647). Public.
+ * Returns the listing AND its royalty split in basis points (server.ts). Public.
  */
 export async function getListing(id: string, opts: RequestOptions = {}): Promise<ListingDetail> {
   return api(`/v1/listings/${encodeURIComponent(id)}`, { auth: false, ...opts })
 }
 
 /**
- * `GET /v1/listings/:id/risk` — **`market/src/server.ts:790`**.
+ * `GET /v1/listings/:id/risk` — **`market/src/server.ts`**.
  *
  * FAILS OPEN by design: an unreachable indexer answers 200 with `indicatorsAvailable: false`
- * (server.ts:807-813), never a 5xx. A caller must read that flag; the status code says nothing.
+ * (server.ts), never a 5xx. A caller must read that flag; the status code says nothing.
  */
 export async function getListingRisk(id: string, opts: RequestOptions = {}): Promise<RiskView> {
   return api(`/v1/listings/${encodeURIComponent(id)}/risk`, { auth: false, ...opts })
 }
 
 /**
- * `GET /v1/listings/:id/bids` — **`market/src/server.ts:846`**.
+ * `GET /v1/listings/:id/bids` — **`market/src/server.ts`**.
  *
  * Public, and unauthenticated: who is bidding what is the auction. The route takes no query
  * parameters at all.
@@ -401,7 +402,7 @@ export async function listBids(
   return api(`/v1/listings/${encodeURIComponent(listingId)}/bids`, { auth: false, ...opts })
 }
 
-/** `GET /v1/listings/:id/offers` — **`market/src/server.ts:893`**. Public; no query parameters. */
+/** `GET /v1/listings/:id/offers` — **`market/src/server.ts`**. Public; no query parameters. */
 export async function listOffers(
   listingId: string,
   opts: RequestOptions = {},
@@ -508,10 +509,10 @@ export async function setListingGallery(
 }
 
 /**
- * `GET /v1/orders` — **`market/src/server.ts:969`**.
+ * `GET /v1/orders` — **`market/src/server.ts`**.
  *
- * Authenticated: the route derives the subject from the token (server.ts:972) and never takes one
- * from the caller. The only query parameter is `role`, and `server.ts:973` reads it as
+ * Authenticated: the route derives the subject from the token (server.ts) and never takes one
+ * from the caller. The only query parameter is `role`, and `server.ts` reads it as
  * `=== 'seller' ? 'seller' : 'buyer'` — so anything that is not exactly `seller` means buyer.
  * This function therefore sends one of exactly two strings and refuses anything else, rather than
  * letting a typo quietly return the wrong side of somebody's trades.
@@ -527,10 +528,10 @@ export async function listOrders(
 }
 
 /**
- * `GET /v1/orders/:id` — **`market/src/server.ts:980`**.
+ * `GET /v1/orders/:id` — **`market/src/server.ts`**.
  *
  * Authenticated. An order that is not yours answers 404 rather than 403, on purpose
- * (server.ts:986-989): "'Does not exist' and 'is not yours' are the same answer", because a
+ * (server.ts): "'Does not exist' and 'is not yours' are the same answer", because a
  * distinct 403 would be an oracle for who bought what.
  */
 export async function getOrder(id: string, opts: RequestOptions = {}): Promise<{ order: OrderView }> {
@@ -538,9 +539,9 @@ export async function getOrder(id: string, opts: RequestOptions = {}): Promise<{
 }
 
 /**
- * `GET /v1/verifications/:urn` — **`market/src/server.ts:1106`**.
+ * `GET /v1/verifications/:urn` — **`market/src/server.ts`**.
  *
- * The URN is a path SEGMENT and is percent-encoded here; `server.ts:1109` decodes it. An
+ * The URN is a path SEGMENT and is percent-encoded here; `server.ts` decodes it. An
  * unencoded `cf:market:item:…` would still work, but an item URN containing a slash would split
  * into two segments and match no route at all.
  *
@@ -556,14 +557,14 @@ export async function getVerification(
 
 /* ------------------------------------------------------------------ writes */
 
-/** What every mutating route adds to its response — `server.ts:1172`. */
+/** What every mutating route adds to its response — `server.ts`. */
 export interface Replayable {
   /** True when this key had already been used for this exact body, and the stored result came back. */
   readonly replayed: boolean
 }
 
 /**
- * `POST /v1/listings` — **`market/src/server.ts:651`**.
+ * `POST /v1/listings` — **`market/src/server.ts`**.
  *
  * The body fields the route actually reads, in the order it reads them: `assetKind` (661),
  * `pricingMode` (662), `settlementMode` (663), `price` (664-666), `itemUrn` (673/688),
@@ -575,7 +576,7 @@ export interface Replayable {
  * snapshotted from the service's environment. A form that offered them would be offering a
  * control that does nothing.
  *
- * Amounts cross as decimal STRINGS. `parseAmount` (money.ts:222) rejects anything else, so a
+ * Amounts cross as decimal STRINGS. `parseAmount` (money.ts) rejects anything else, so a
  * number here is a 400 and never a rounded price.
  */
 export async function createListing(
@@ -609,14 +610,14 @@ export async function createListing(
 }
 
 /**
- * `POST /v1/listings/:id/activate` — **`market/src/server.ts:742`**.
+ * `POST /v1/listings/:id/activate` — **`market/src/server.ts`**.
  *
- * For an `onchain` listing the route REQUIRES `onchainEscrowTx` (server.ts:755) and reads an
- * optional `chain`, defaulting to `ember` (server.ts:758). For a `custodial` one it reads neither
+ * For an `onchain` listing the route REQUIRES `onchainEscrowTx` (server.ts) and reads an
+ * optional `chain`, defaulting to `ember` (server.ts). For a `custodial` one it reads neither
  * and this client sends neither: a field the route does not read is a field a reader will believe
  * did something.
  *
- * **It fails CLOSED** (server.ts:756-763). Two failures come back and they mean opposite things:
+ * **It fails CLOSED** (server.ts). Two failures come back and they mean opposite things:
  *
  *   * 409 `state_conflict` "the on-chain escrow is not confirmed yet" — the indexer answered, and
  *     the answer was no.
@@ -640,10 +641,10 @@ export async function activateListing(
 }
 
 /**
- * `DELETE /v1/listings/:id` — **`market/src/server.ts:776`**.
+ * `DELETE /v1/listings/:id` — **`market/src/server.ts`**.
  *
  * Withdraws the seller's own listing. The reason is fixed by the service ("withdrawn by the
- * seller", server.ts:782) and is NOT read from a body, so none is sent.
+ * seller", server.ts) and is NOT read from a body, so none is sent.
  *
  * This route is not wrapped in `withIdempotentRoute`, and does not need to be: cancelling twice
  * cancels once. The key is still sent — it costs nothing and it is the one habit that keeps a
@@ -662,12 +663,12 @@ export async function cancelListing(
 }
 
 /**
- * `POST /v1/listings/:id/buy` — **`market/src/server.ts:818`**.
+ * `POST /v1/listings/:id/buy` — **`market/src/server.ts`**.
  *
- * The only body field read is `amount` (server.ts:829), as a decimal string. The buyer's subject
+ * The only body field read is `amount` (server.ts), as a decimal string. The buyer's subject
  * comes from the token, never from the body.
  *
- * A 402 `payment_refused` is not an error in this service's sense — server.ts:428-433: "the ledger
+ * A 402 `payment_refused` is not an error in this service's sense — server.ts: "the ledger
  * looked at the request and said the money is not there. That is an answer about the customer's
  * balance, not a fault in this service." The UI says so.
  */
@@ -686,15 +687,15 @@ export async function buyListing(
 }
 
 /**
- * `POST /v1/listings/:id/bids` — **`market/src/server.ts:863`**.
+ * `POST /v1/listings/:id/bids` — **`market/src/server.ts`**.
  *
- * Body: `amount` only (server.ts:873). The response carries `outbid` — the id of the bid this one
+ * Body: `amount` only (server.ts). The response carries `outbid` — the id of the bid this one
  * displaced, or null — and `auctionEndsAt`, which is non-null only when the bid EXTENDED the
- * auction (server.ts:885-886). A client that showed that field as "the close time" would show
+ * auction (server.ts). A client that showed that field as "the close time" would show
  * `null` as "no close time" on every bid that did not extend.
  *
  * A bid that does not beat the leader is a 409 `bid_too_low` carrying `minimum` as a string
- * (server.ts:413-427), so the UI can offer the next legal bid without a second round trip.
+ * (server.ts), so the UI can offer the next legal bid without a second round trip.
  */
 export async function placeBid(
   key: string,
@@ -719,10 +720,10 @@ export async function placeBid(
 }
 
 /**
- * `POST /v1/listings/:id/offers` — **`market/src/server.ts:898`**.
+ * `POST /v1/listings/:id/offers` — **`market/src/server.ts`**.
  *
- * Body: `amount` (server.ts:908) and an optional `expiresAt` ISO string (909). `readDate`
- * (server.ts:1348-1354) refuses anything that is not a valid ISO 8601 string, so an empty string
+ * Body: `amount` (server.ts) and an optional `expiresAt` ISO string (909). `readDate`
+ * (server.ts) refuses anything that is not a valid ISO 8601 string, so an empty string
  * is a 400 — this client omits the field instead.
  */
 export async function makeOffer(
@@ -743,10 +744,10 @@ export async function makeOffer(
 }
 
 /**
- * `DELETE /v1/offers/:id` — **`market/src/server.ts:917`**.
+ * `DELETE /v1/offers/:id` — **`market/src/server.ts`**.
  *
  * The offerer withdraws their own offer. `to: 'withdrawn'` is fixed by the service
- * (server.ts:922), not a body field, so nothing is sent.
+ * (server.ts), not a body field, so nothing is sent.
  */
 export async function withdrawOffer(
   key: string,
@@ -761,12 +762,12 @@ export async function withdrawOffer(
 }
 
 /**
- * `POST /v1/offers/:id/accept` — **`market/src/server.ts:931`**.
+ * `POST /v1/offers/:id/accept` — **`market/src/server.ts`**.
  *
  * The SELLER accepts. It takes no body at all: the amount settled is the OFFER's, not the
- * listing's price (server.ts:930, 948), and there is nothing for a caller to supply. Sending an
+ * listing's price (server.ts, 948), and there is nothing for a caller to supply. Sending an
  * `amount` here would be sending a field that is ignored — and the fingerprint is taken over
- * `{ offerId }` only (server.ts:943), so it would not even change the idempotency behaviour.
+ * `{ offerId }` only (server.ts), so it would not even change the idempotency behaviour.
  */
 export async function acceptOffer(
   key: string,
@@ -781,15 +782,15 @@ export async function acceptOffer(
 }
 
 /**
- * `POST /v1/orders/:id/disputes` — **`market/src/server.ts:993`**.
+ * `POST /v1/orders/:id/disputes` — **`market/src/server.ts`**.
  *
- * Body: `reason` only (server.ts:1008), and it must be a non-empty string (`requireString`,
- * server.ts:1321-1327). Only the buyer or the seller may raise one — a third party's complaint is
+ * Body: `reason` only (server.ts), and it must be a non-empty string (`requireString`,
+ * server.ts). Only the buyer or the seller may raise one — a third party's complaint is
  * a moderation case, which is a different table with no power to move money
- * (`market/src/moderation.ts:366-373`).
+ * (`market/src/moderation.ts`).
  *
  * Wrapped in `withIdempotentRoute` as of `market@4df8518`; before that a double-clicked button
- * opened TWO disputes on one order and froze the listing twice (server.ts:998-1003).
+ * opened TWO disputes on one order and froze the listing twice (server.ts).
  */
 export async function openDispute(
   key: string,
@@ -806,12 +807,12 @@ export async function openDispute(
 }
 
 /**
- * `POST /v1/collections` — **`market/src/server.ts:602`**.
+ * `POST /v1/collections` — **`market/src/server.ts`**.
  *
- * Body: `slug`, `name`, optional `description`, optional `royalties` (server.ts:606-612). The
+ * Body: `slug`, `name`, optional `description`, optional `royalties` (server.ts). The
  * owner is the token's subject, never a body field.
  *
- * This route is NOT wrapped in `withIdempotentRoute` (compare server.ts:682) — a retry creates a
+ * This route is NOT wrapped in `withIdempotentRoute` (compare server.ts) — a retry creates a
  * second collection. The key is sent anyway so that the day the service wraps it, this client is
  * already correct; today it is simply ignored.
  */
@@ -836,7 +837,7 @@ export async function createCollection(
 /**
  * The `minimum` a `bid_too_low` refusal carries.
  *
- * `market/src/server.ts:413-427` answers a bid that does not beat the leader with a 409 whose body
+ * `market/src/server.ts` answers a bid that does not beat the leader with a 409 whose body
  * is `{ error: { code: 'bid_too_low', message, minimum, requestId } }`, where `minimum` is "a
  * string: an amount is never a JSON number". It is there so a client can offer the next legal bid
  * without a second round trip.
@@ -866,11 +867,11 @@ export function bidMinimum(err: unknown): string | null {
  * They cannot, and this constant exists so that the fact is stated once and rendered rather than
  * silently worked around.
  *
- * `GET /v1/disputes` (server.ts:1015) calls `requireOperator` (1017), and `orderWire`
- * (server.ts:1205-1230) carries no dispute field. So `micro-market` today has **no route by which
+ * `GET /v1/disputes` (server.ts) calls `requireOperator` (1017), and `orderWire`
+ * (server.ts) carries no dispute field. So `micro-market` today has **no route by which
  * the buyer or the seller can read back a dispute they raised**. What they can see is the effect:
- * the order's `proceedsState` stays `held` (`orders.ts:109`) and the listing behind it goes
- * `frozen` (`moderation.ts:383`).
+ * the order's `proceedsState` stays `held` (`orders.ts`) and the listing behind it goes
+ * `frozen` (`moderation.ts`).
  *
  * The order page therefore shows those two facts and says plainly that the dispute's own state is
  * not readable here — rather than inventing a status, or leaving a reader to conclude from an

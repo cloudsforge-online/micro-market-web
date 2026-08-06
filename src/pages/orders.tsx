@@ -1,13 +1,13 @@
 /**
  * Orders, and the dispute path.
  *
- * `GET /v1/orders?role=…` (server.ts:969) for the list, `GET /v1/orders/:id` (980) for one, and
+ * `GET /v1/orders?role=…` (server.ts) for the list, `GET /v1/orders/:id` (980) for one, and
  * `POST /v1/orders/:id/disputes` (993) to raise one.
  *
  * ── What this surface can and cannot tell you about a dispute ─────────────────────────────────
  *
  * It can tell you that you raised one, in the moment you raise it. It cannot tell you its state
- * afterwards: `GET /v1/disputes` requires an operator (server.ts:1017) and `orderWire`
+ * afterwards: `GET /v1/disputes` requires an operator (server.ts) and `orderWire`
  * (1205-1230) carries no dispute field, so `micro-market` has no route by which a buyer or a
  * seller reads back a dispute they opened.
  *
@@ -247,9 +247,9 @@ function OrderBody({ order }: { order: OrderView }) {
 /**
  * Raising a dispute, and being honest about what happens after.
  *
- * Only the buyer or the seller may raise one (`market/src/moderation.ts:366-373`); a third party's
+ * Only the buyer or the seller may raise one (`market/src/moderation.ts`); a third party's
  * complaint is a moderation case with no power to move money. A refund is only possible for a
- * custodial sale — `moderation.ts:430-434`: "An on-chain sale was never the platform's to reverse:
+ * custodial sale — `moderation.ts`: "An on-chain sale was never the platform's to reverse:
  * the buyer paid the seller's own wallet and no ledger entry exists to reverse." That is said
  * before the button, not after it is pressed.
  */
@@ -263,7 +263,7 @@ function DisputePanel({ order }: { order: OrderView }) {
   // The note under the button says "Pressing this twice is safe … which is what stops one
   // complaint becoming two disputes and freezing the listing twice." The key is what makes that
   // true of the DISPUTES; the ref latch below is what makes it true of the SCREEN, because the
-  // second concurrent request comes back 503 `in_flight` (market/src/server.ts:459-466) and this
+  // second concurrent request comes back 503 `in_flight` (market/src/server.ts) and this
   // component would render it as "Not opened" over the dispute it had just opened.
   const submit = () =>
     run(async () => {

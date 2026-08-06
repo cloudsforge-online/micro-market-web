@@ -11,7 +11,7 @@ import { cloudsforgeHosts, type CloudsForgeHosts, type SurfaceKey } from '@cloud
  * The surface this application IS.
  *
  * It selects the switcher entry marked current, and it names this app's own API host.
- * `ui/packages/ui/src/surfaces.ts:227-238` registers `market` as a product with `inSwitcher: true`,
+ * `ui/packages/ui/src/surfaces.ts` registers `market` as a product with `inSwitcher: true`,
  * accent `#9b7bf0` and `devPort: 4007`.
  */
 export const PRODUCT: SurfaceKey = 'market'

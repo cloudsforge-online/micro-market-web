@@ -1,7 +1,7 @@
 /**
  * Browse: the front door.
  *
- * One request — `GET /v1/listings` (`market/src/server.ts:618`) — and everything else on this
+ * One request — `GET /v1/listings` (`market/src/server.ts`) — and everything else on this
  * page is done to what it returned. That is not an optimisation, it is the surface: the route
  * reads four filters and no text query and no page size, so a search box here filters fifty
  * listings rather than searching a catalogue. `searchScopeNote` says which, every time.
@@ -32,7 +32,7 @@ export function BrowsePage() {
 
   const load = useCallback(
     (signal: AbortSignal) =>
-      // `status` is left at the route's own default of `active` (server.ts:624) rather than sent
+      // `status` is left at the route's own default of `active` (server.ts) rather than sent
       // explicitly: a browse page that asked for drafts would be showing sellers' unpublished work
       // to buyers.
       listListings(assetKind === '' ? {} : { assetKind }, { signal }),
@@ -161,8 +161,8 @@ export function BrowsePage() {
  * One listing in the grid.
  *
  * The price row is the one that has to be right. An auction's `price` is its STARTING price
- * (`market/src/bids.ts:200-203`), not what it will sell for, and an `offers_only` listing has no
- * price at all (`server.ts:1189`) — so the three pricing modes get three different labels rather
+ * (`market/src/bids.ts`), not what it will sell for, and an `offers_only` listing has no
+ * price at all (`server.ts`) — so the three pricing modes get three different labels rather
  * than one word doing three jobs.
  */
 function ListingCard({ listing }: { listing: ListingView }) {

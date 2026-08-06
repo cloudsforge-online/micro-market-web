@@ -58,7 +58,7 @@ describe('escrowKnowledge — what a listing actually says about its escrow', ()
   })
 
   it('calls a custodial escrow a LEDGER RESERVATION, never a balance', () => {
-    // `market/src/escrow.ts:1-13` — market holds the reference; the ledger holds the value. A UI
+    // `market/src/escrow.ts` — market holds the reference; the ledger holds the value. A UI
     // that says "we are holding your funds" has made market a second ledger in the reader's head.
     const k = escrowKnowledge(listing({ settlementMode: 'custodial', escrowed: true }))
     assert.equal(k.state, 'ledger_reservation')
@@ -68,7 +68,7 @@ describe('escrowKnowledge — what a listing actually says about its escrow', ()
   })
 
   it('says an ACTIVE on-chain listing had its escrow confirmed, because activation fails closed', () => {
-    // server.ts:757-763 — a listing cannot reach `active` without `escrowStatus().confirmed`.
+    // server.ts — a listing cannot reach `active` without `escrowStatus().confirmed`.
     const k = escrowKnowledge(listing({ settlementMode: 'onchain', status: 'active', escrowed: true }))
     assert.equal(k.state, 'onchain_confirmed_at_activation')
     assert.equal(k.known, true)
@@ -125,7 +125,7 @@ describe('diagnoseActivation — the branch the estate lost a release to', () =>
     new ApiError(status, message, code, 'req-1')
 
   it('reads a 503 indexer_unavailable as UNKNOWN, never as a negative', () => {
-    // server.ts:467-475 — "the on-chain escrow could not be confirmed; try again shortly".
+    // server.ts — "the on-chain escrow could not be confirmed; try again shortly".
     const d = diagnoseActivation(err(503, 'the on-chain escrow could not be confirmed', 'indexer_unavailable'))
     assert.equal(d.outcome, 'could_not_confirm')
     assert.equal(d.escrowIsUnknown, true)
@@ -143,7 +143,7 @@ describe('diagnoseActivation — the branch the estate lost a release to', () =>
   })
 
   it('reads a 409 with the escrow message as ACTUALLY NOT CONFIRMED', () => {
-    // server.ts:762 — `new ListingStateError('the on-chain escrow is not confirmed yet')`.
+    // server.ts — `new ListingStateError('the on-chain escrow is not confirmed yet')`.
     const d = diagnoseActivation(err(409, 'the on-chain escrow is not confirmed yet', 'state_conflict'))
     assert.equal(d.outcome, 'not_confirmed')
     assert.equal(d.escrowIsUnconfirmed, true)
@@ -221,7 +221,7 @@ describe('riskKnowledge — the same distinction, one level out', () => {
   })
 
   it('reads indicatorsAvailable:false as NOT CHECKED, not as clean', () => {
-    // server.ts:801-804 — "a broken indexer renders as a clean bill of health" is the failure.
+    // server.ts — "a broken indexer renders as a clean bill of health" is the failure.
     const k = riskKnowledge(risk({ indicatorsAvailable: false }))
     assert.equal(k.known, false)
     assert.match(k.note, /could not read the chain/i)
@@ -257,7 +257,7 @@ describe('riskKnowledge — the same distinction, one level out', () => {
     assert.match(k.note, /Facts, not a score/i)
   })
 
-  it('has copy for every code in the service’s closed set (market/src/risk.ts:34-41)', () => {
+  it('has copy for every code in the service’s closed set (market/src/risk.ts)', () => {
     const codes = [
       'mint_authority_present',
       'ownership_not_renounced',

@@ -28,7 +28,7 @@
  *
  * ── WHY THIS IS ONE HOOK AND NOT SIX COPIES ───────────────────────────────────────────────────
  *
- * `src/lib/resource.ts:1-7` makes the argument for reads: "every screen that computes it by hand
+ * `src/lib/resource.ts` makes the argument for reads: "every screen that computes it by hand
  * eventually gets one of the cases wrong ... The decision is made once here, as a pure function,
  * so the wrong version cannot be written a seventh time." Six forms here — buy, bid, offer,
  * activate, create, dispute — were the same three lines six times, and all six were wrong in the
@@ -38,9 +38,9 @@
  *
  * It does not touch the idempotency key, and it must never start. `src/lib/intent.ts` mints one
  * key per INTENT at mount and renews it only after a success, and that is the mechanism that
- * makes a duplicate harmless AT THE SERVER (`market/src/server.ts:1137-1142`). This hook is about
+ * makes a duplicate harmless AT THE SERVER (`market/src/server.ts`). This hook is about
  * how many requests leave the BROWSER, which is a different question with a different answer:
- * `market/src/server.ts:459-466` answers a second concurrent request under a live key with 503
+ * `market/src/server.ts` answers a second concurrent request under a live key with 503
  * `in_flight`, and a client that renders that as "The purchase did not go through." has told a
  * buyer their money did not move while it was moving. The service's own comment says so —
  * "telling a client 'conflict' for work that is about to commit is how a purchase gets reported

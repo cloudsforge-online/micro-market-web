@@ -4,7 +4,7 @@
  * A static page, deliberately: it makes no request and cannot fail. Every figure on it is the
  * platform's stated position from `docs/ecosystem/15-monetisation-model.md`, which is a document
  * rather than a runtime value — and the ACTUAL rate charged on any given sale is the one
- * snapshotted onto that listing when it was created (`market/src/server.ts:701`), which the
+ * snapshotted onto that listing when it was created (`market/src/server.ts`), which the
  * listing page shows. This page says the policy; the listing page says the fact.
  *
  * That distinction is the reason the number below is not fetched. A rate rendered here from a

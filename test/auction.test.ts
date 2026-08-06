@@ -76,7 +76,7 @@ describe('auctionClock', () => {
   })
 
   it('warns that a late bid moves the close time', () => {
-    // `bids.ts:250-261` extends `auction_ends_at` on a late bid, so the number on screen is a
+    // `bids.ts` extends `auction_ends_at` on a late bid, so the number on screen is a
     // value that changes. A page that presented it as fixed would say the auction had closed
     // while it was still taking bids.
     assert.match(auctionClock(listing(), NOW).note, /can move/i)
@@ -156,7 +156,7 @@ describe('bidFloor — what the service will actually accept', () => {
   })
 
   it('reproduces the service’s own fallback of 1 for a listing with no price', () => {
-    // `bids.ts:203` — `minimumBid(leader?.amount ?? null, listing.price ?? 1n)`. Smoothing this
+    // `bids.ts` — `minimumBid(leader?.amount ?? null, listing.price ?? 1n)`. Smoothing this
     // over would offer a floor the service does not enforce, and produce a 409 nobody can explain.
     const floor = bidFloor(listing({ price: null }), [])
     assert.equal(floor.minimum, 1n)
@@ -181,7 +181,7 @@ describe('the words around a leading bid', () => {
   })
 
   it('says the reserve exists and is not published', () => {
-    // `server.ts:1190-1191` keeps the reserve off the wire; `orders.ts` checks it at close. So a
+    // `server.ts` keeps the reserve off the wire; `orders.ts` checks it at close. So a
     // leading bid above every other bid may still not buy the item.
     assert.match(LEADING_BID_CAVEAT, /not a final price/i)
     assert.match(LEADING_BID_CAVEAT, /reserve/i)
