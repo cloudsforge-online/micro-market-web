@@ -99,7 +99,7 @@ export function ModerationNotice({ listing }: { listing: ListingView }) {
  * The verification level, with "nobody has looked" kept apart from "looked, and unverified".
  *
  * `GET /v1/verifications/:urn` answers `{ verification: null }` for a subject nobody has reviewed
- * (`market/src/server.ts:1106-1110`), which is a different fact from the `unverified` level. The
+ * (`market/src/server.ts`), which is a different fact from the `unverified` level. The
  * two render differently here for the same reason the escrow does.
  */
 export function VerificationBadge({ verification }: { verification: VerificationView | null }) {
@@ -124,7 +124,7 @@ export function VerificationBadge({ verification }: { verification: Verification
 /**
  * Risk indicators: computed facts, never a score.
  *
- * `market/src/risk.ts:1-29` refuses a numeric score in three separate ways, and the frontend is
+ * `market/src/risk.ts` refuses a numeric score in three separate ways, and the frontend is
  * where a score would be reintroduced by accident — a count of indicators rendered as a rating is
  * the same mistake with extra steps. So each indicator is a sentence, and the panel says whether
  * the chain was readable at all.

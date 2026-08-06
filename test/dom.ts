@@ -5,7 +5,7 @@
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  * WHY THIS FILE EXISTS ALONGSIDE `browser-stubs.ts`, WHICH SAYS THE OPPOSITE
  *
- * `test/browser-stubs.ts:4-8` states the estate's position: "There is no DOM in this suite on
+ * `test/browser-stubs.ts` states the estate's position: "There is no DOM in this suite on
  * purpose: jsdom is a second browser implementation to keep current, it disagrees with real ones
  * in exactly the places that matter, and a test that renders a component in it proves the
  * component renders in jsdom."

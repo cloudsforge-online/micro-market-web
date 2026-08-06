@@ -4,7 +4,7 @@
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  * WHY THIS FILE IS SEPARATE FROM `journeys.test.ts`, WHICH ALREADY DOUBLE-CLICKS FOUR OF THESE
  *
- * `journeys.test.ts:292` (BJ-MKT-04) double-clicks Buy and asserts ONE IDEMPOTENCY KEY. It says
+ * `journeys.test.ts` (BJ-MKT-04) double-clicks Buy and asserts ONE IDEMPOTENCY KEY. It says
  * so in as many words: "Whether the button also guards itself with `busy` is this app's business;
  * the key is the contract". That reading is correct for doc 22 — a browser scenario may not assert
  * a business rule, and collapsing duplicates IS the server's rule.
@@ -24,12 +24,12 @@
  *
  * ── WHAT THE SECOND REQUEST ACTUALLY COSTS HERE ───────────────────────────────────────────────
  *
- * Not a double charge. `useIntent` (src/lib/intent.ts:22) holds the key in
+ * Not a double charge. `useIntent` (src/lib/intent.ts) holds the key in
  * `useState(() => newIdempotencyKey(prefix))`, so it is minted at MOUNT and is stable across
  * renders; both same-tick clicks read the same key from the same closure and send the same header.
  * The server collapses them. That half is already right and this file must not break it.
  *
- * What it costs is a LIE ABOUT THE OUTCOME. `market/src/server.ts:459-466` answers a request whose
+ * What it costs is a LIE ABOUT THE OUTCOME. `market/src/server.ts` answers a request whose
  * key has a claim but no stored response yet with **503 `in_flight`** — and the comment there is
  * the whole argument for this file:
  *
@@ -38,7 +38,7 @@
  *
  * The service went to the trouble of choosing a status that would not be reported as a failure,
  * and `BuyForm`'s `catch` reports every non-2xx as a failure anyway: `The purchase did not go
- * through.` Meanwhile `listing.tsx:475` promises the reader, in as many words, "Clicking twice is
+ * through.` Meanwhile `listing.tsx` promises the reader, in as many words, "Clicking twice is
  * safe". Under a same-tick double click that promise is false — not because money moves twice, but
  * because the buyer is told their purchase failed when it succeeded.
  *
@@ -289,7 +289,7 @@ for (const strict of [false, true]) {
             once(
               'an activation',
               posted.length,
-              'Activation FAILS CLOSED on the chain index (sell.tsx:7-18): a second call is a ' +
+              'Activation FAILS CLOSED on the chain index (sell.tsx): a second call is a ' +
                 'second indexer read that can answer differently from the first.',
             ),
           )
@@ -372,7 +372,7 @@ for (const strict of [false, true]) {
             once(
               'a dispute',
               posted.length,
-              'orders.tsx:305-308 promises "Pressing this twice is safe … which is what stops ' +
+              'orders.tsx promises "Pressing this twice is safe … which is what stops ' +
                 'one complaint becoming two disputes and freezing the listing twice".',
             ),
           )
@@ -388,7 +388,7 @@ describe('a purchase that went through is never reported as failed', () => {
   const path = `POST /v1/listings/${fx.LISTING_ID}/buy`
 
   /**
-   * `market/src/idempotency.ts:154` throws `IdempotencyInFlightError` the moment it finds a claim
+   * `market/src/idempotency.ts` throws `IdempotencyInFlightError` the moment it finds a claim
    * with no stored response — so in the real service the 503 comes back FAST while the first
    * request is still settling in the ledger. That ordering is the one modelled here, and it is the
    * one a naive end-state assertion misses: the failure is rendered, then overwritten seconds
@@ -424,8 +424,8 @@ describe('a purchase that went through is never reported as failed', () => {
           assert.ok(
             s.queryByRole('alert', /did not go through/i) === null,
             'the buyer was told "The purchase did not go through." while the purchase was ' +
-              'committing. market/src/server.ts:459-463 chose 503 over 409 precisely so that a ' +
-              'client would not report it as a failure, and listing.tsx:475 promises the reader ' +
+              'committing. market/src/server.ts chose 503 over 409 precisely so that a ' +
+              'client would not report it as a failure, and listing.tsx promises the reader ' +
               '"Clicking twice is safe".',
           )
           assert.doesNotMatch(
@@ -513,7 +513,7 @@ describe('the intent key is minted once per intent, StrictMode included', () => 
           1,
           `a retry of one intent sent ${keys.size} keys under StrictMode: ${[...keys].join(', ')}. ` +
             `A key minted per click is a second order for a purchase the first click may already ` +
-            `have committed — src/lib/idempotency.ts:12-16.`,
+            `have committed — src/lib/idempotency.ts.`,
         )
         assert.match([...keys][0] ?? '', /^market-web:buy:/)
       },

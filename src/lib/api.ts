@@ -95,7 +95,7 @@ export class ApiError extends Error {
    * The parsed error body, when there was one.
    *
    * Kept because this estate's errors carry MORE than a sentence: a `bid_too_low` from
-   * `micro-market` includes `minimum` as a decimal string (`market/src/server.ts:413-427`) "so a
+   * `micro-market` includes `minimum` as a decimal string (`market/src/server.ts`) "so a
    * client can re-bid without a second round trip and without guessing". Discarding the body
    * would leave a UI scraping that number back out of English prose, which is how a bidder is
    * shown a minimum that is off by a digit.
@@ -116,8 +116,8 @@ export class ApiError extends Error {
  * Pull the sentence, the code and the request id out of a service's error body.
  *
  * The estate's envelope is **nested** — `{error: {code, message, requestId}}`, built by
- * `errorReply()` in every service (`hub-api/src/server.ts:589`, `identity/src/server.ts:1431`,
- * `service-template/src/server.ts:342`). This function used to read it as flat, assigning
+ * `errorReply()` in every service (`hub-api/src/server.ts`, `identity/src/server.ts`,
+ * `service-template/src/server.ts`). This function used to read it as flat, assigning
  * `data.error` — an object — straight to the displayed message. Every server-side failure in
  * every app cut from this template would have rendered as `[object Object]`, with the real
  * message, the code and the request id all present in the response and all discarded. The
@@ -267,7 +267,7 @@ export interface RequestOptions {
    * Extra request headers.
    *
    * Added for `Idempotency-Key`, which `micro-market` REQUIRES on every mutating route
-   * (`market/src/server.ts:1152-1157`: an 8-to-200 character key, or the request is a 400). The
+   * (`market/src/server.ts`: an 8-to-200 character key, or the request is a 400). The
    * header is sent per request rather than per client because the key identifies the INTENT — one
    * key per Buy button press, replayed unchanged on every retry of that press.
    *

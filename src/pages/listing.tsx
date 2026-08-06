@@ -3,10 +3,10 @@
  *
  * Five calls, each of them cited in `src/lib/market.ts`:
  *
- *   `GET /v1/listings/:id`        server.ts:636 — the listing and its royalty split in bps
- *   `GET /v1/listings/:id/risk`   server.ts:790 — verification and chain facts, FAILING OPEN
- *   `GET /v1/listings/:id/bids`   server.ts:846 — the auction, when there is one
- *   `GET /v1/listings/:id/offers` server.ts:893 — standing offers
+ *   `GET /v1/listings/:id`        server.ts — the listing and its royalty split in bps
+ *   `GET /v1/listings/:id/risk`   server.ts — verification and chain facts, FAILING OPEN
+ *   `GET /v1/listings/:id/bids`   server.ts — the auction, when there is one
+ *   `GET /v1/listings/:id/offers` server.ts — standing offers
  *   and one of buy / bid / offer, each requiring an Idempotency-Key.
  *
  * The gallery is NOT a sixth call: `GET /v1/listings/:id` carries `images` alongside the listing,
@@ -131,7 +131,7 @@ function ListingBody({ detail, onChanged }: { detail: ListingDetail; onChanged: 
   const loadOffers = useCallback((signal: AbortSignal) => listOffers(listing.id, { signal }), [listing.id])
   const offers = useResource(loadOffers, () => 1, 'The offers did not load.')
 
-  // `?? []` is the shape `src/lib/resource.ts:14-20` warns about — "reporting 'nothing here' for a
+  // `?? []` is the shape `src/lib/resource.ts` warns about — "reporting 'nothing here' for a
   // timeout is how an outage reads as a quiet week" — so the failure travels alongside it. Nothing
   // downstream may read this empty array without also reading `bidsFailed`: an auction whose bids
   // did not load has an UNKNOWN leader, not no leader, and the two lead to different sentences and
@@ -481,7 +481,7 @@ function BuyForm({ listing, onChanged }: { listing: ListingView; onChanged: () =
 
   // `run` latches on a ref, so the second click of a double click never becomes a second request.
   // That is not belt-and-braces on top of the idempotency key — the key stops a second ORDER, and
-  // this stops the second REQUEST, whose 503 `in_flight` (server.ts:459-466) this component would
+  // this stops the second REQUEST, whose 503 `in_flight` (server.ts) this component would
   // otherwise render as "The purchase did not go through." for a purchase that went through. The
   // note under the button promises the reader that clicking twice is safe; this is what makes it
   // true on the screen as well as in the ledger.
@@ -489,7 +489,7 @@ function BuyForm({ listing, onChanged }: { listing: ListingView; onChanged: () =
     run(async () => {
       if (price === null) return
       try {
-        // `amount` is the only body field the route reads (server.ts:829), and it is sent as the
+        // `amount` is the only body field the route reads (server.ts), and it is sent as the
         // service's own string rather than reformatted — a re-rendered amount is a chance to change
         // it, and the service compares it against the listing.
         const response = await buyListing(intent.key, listing.id, { amount: listing.price ?? '0' })
@@ -549,7 +549,7 @@ function BidForm({
   const [result, setResult] = useState<ActionResult>({ kind: 'none' })
   const { busy, run } = useSubmit()
 
-  // The floor is computed the way the service computes it — `bids.ts:203` — so the form offers the
+  // The floor is computed the way the service computes it — `bids.ts` — so the form offers the
   // minimum the service will actually accept rather than one it would refuse.
   const floor = bidFloorFrom(listing, leaderAmount)
 
@@ -572,7 +572,7 @@ function BidForm({
         intent.renew()
         onChanged()
       } catch (err) {
-        // A `bid_too_low` 409 carries the minimum as a string (server.ts:413-427) so a bidder can
+        // A `bid_too_low` 409 carries the minimum as a string (server.ts) so a bidder can
         // re-bid without a second round trip. Read off the parsed body, never off the sentence.
         setResult({
           kind: 'error',
@@ -645,7 +645,7 @@ function OfferForm({ listing, onChanged }: { listing: ListingView; onChanged: ()
       try {
         const response = await makeOffer(intent.key, listing.id, {
           amount,
-          // Omitted rather than sent empty: `readDate` (server.ts:1348-1354) refuses anything that
+          // Omitted rather than sent empty: `readDate` (server.ts) refuses anything that
           // is not a valid ISO string, so `expiresAt: ''` would be a 400.
           ...(expires === '' ? {} : { expiresAt: new Date(expires).toISOString() }),
         })

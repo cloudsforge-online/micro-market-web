@@ -33,22 +33,26 @@
 #
 # Re-checked against micro-org rather than believed:
 #
-#   * the single checkout is fixed. web-ci.yml:88-115 checks the app out into `app/`, micro-ui into
+#   * the single checkout is fixed. web-ci.yml checks the app out into `app/`, micro-ui into
 #     `ui/` beside it, and installs THE SIBLING FIRST, because `link:` resolves to the sibling's own
 #     node_modules — the shape of the `check:` job below. micro-ui is public now, so even the
 #     `estate_token` fallback to `github.token` resolves.
-#   * the deep-route probe is fixed, and inverted. web-ci.yml:290-297 REQUIRES an unknown path to
+#   * the deep-route probe is fixed, and inverted. web-ci.yml REQUIRES an unknown path to
 #     answer 404 and names `try_files $uri /index.html` as the thing not to do; the 200 is now asked
-#     only of the optional `deep-link-path` input (:299-309), a route the app really has.
+#     only of the optional `deep-link-path` input, a route the app really has.
 #
 # So the two things that made a bespoke `check:` and `image:` unavoidable are gone. This file is
-# still not deleted, because what remains is not a workaround: `rules:` (line 127 below) was
-# never claimed to be temporary — re-read the first line of this header, it names `check` and
+# still not deleted, because what remains is not a workaround: the `rules:` job below was never
+# claimed to be temporary — re-read the first line of this header, it names `check` and
 # `image` — and web-ci.yml has no input that could carry it. Its `runtime-hosts` job checks VITE_*,
 # build arguments, third-party analytics and the README. It cannot check
-#   that every market route carries the line it was verified against (line 189),
-#   that no operator-only route is called from this buyer-and-seller surface (line 202),
-#   or that money is never a float (line 215).
+#   that every market route names the service that serves it,
+#   that no operator-only route is called from this buyer-and-seller surface,
+#   or that money is never a float.
+#
+# Those three steps used to be cited here by line. They are named instead, for the same reason the
+# route citations below no longer carry one: a line number goes stale silently and the reader is
+# sent to the wrong place with confidence.
 #
 # Migrating would delete assertions to save a checkout that is already written. What was genuinely
 # missing was a PRODUCER — nothing here ever pushed the image it built — and that is what the
@@ -186,23 +190,64 @@ jobs:
         # and 404s on the first hard refresh in production.
         run: test -f test/routes.test.ts && grep -q 'nginx.conf' test/routes.test.ts
 
-      - name: Every market route carries the line it was verified against
+      - name: Every market route names the service that serves it
         # THE RULE THIS REPOSITORY EXISTS TO NOT BREAK AGAIN. Seven clients in this estate were
-        # written against imagined surfaces, three of them inside micro-market itself. Every path
-        # in src/lib/market.ts cites `server.ts:<line>`, read out of buildRoutes(), and
-        # test/market.test.ts asserts the REQUEST rather than the response.
+        # written against imagined surfaces, three of them inside micro-market itself. Every route
+        # in src/lib/market.ts is declared against `market/src/server.ts`, read out of
+        # buildRoutes(), and test/market.test.ts asserts the REQUEST rather than the response.
+        #
+        # ── WHY THIS STEP NAMES ROUTES AND NOT LINE NUMBERS ANY MORE ──────────────────────────
+        #
+        # It used to loop over nineteen hardcoded line numbers and require src/lib/market.ts to
+        # cite each one. A line number names a position in a file micro-market OWNS and is free to
+        # edit, so this repository went red for edits that broke nothing here — and nothing runs
+        # this workflow when that service changes, so it surfaced during a release. Worse, the
+        # numbers had already gone wrong in the other direction and passed anyway: 893 was cited
+        # as GET /v1/listings/:id/offers and today lands in the middle of the listing-bounty block,
+        # because this step only ever checked that the CLIENT wrote the number down.
+        #
+        # A route name cannot drift. It is also four routes stronger: the image surface was added
+        # without a line and so was never covered by the old loop at all.
         run: |
           set -uo pipefail
-          for line in 596 602 618 636 651 742 776 790 818 846 863 893 898 917 931 969 980 993 1106; do
-            grep -q "server.ts:${line}" src/lib/market.ts \
-              || { echo "::error::src/lib/market.ts does not cite server.ts:${line}"; exit 1; }
-          done
-          echo "ok: every route cites the line it was read from"
+          routes='GET /v1/collections
+          POST /v1/collections
+          GET /v1/listings
+          GET /v1/listings/:id
+          POST /v1/listings
+          POST /v1/listings/:id/activate
+          DELETE /v1/listings/:id
+          GET /v1/listings/:id/risk
+          POST /v1/listings/:id/buy
+          GET /v1/listings/:id/bids
+          POST /v1/listings/:id/bids
+          GET /v1/listings/:id/offers
+          POST /v1/listings/:id/offers
+          DELETE /v1/offers/:id
+          POST /v1/offers/:id/accept
+          GET /v1/orders
+          GET /v1/orders/:id
+          POST /v1/orders/:id/disputes
+          GET /v1/verifications/:urn
+          GET /v1/images/config
+          POST /v1/listings/:id/images
+          PUT /v1/listings/:id/images
+          DELETE /v1/listings/:id/images/:assetId'
+          n=0
+          while IFS= read -r route; do
+            route=$(echo "$route" | sed 's/^ *//')
+            [ -n "$route" ] || continue
+            grep -qF "\`$route\` — **\`market/src/server.ts\`**" src/lib/market.ts \
+              || { echo "::error::src/lib/market.ts does not declare $route against market/src/server.ts"; exit 1; }
+            n=$((n + 1))
+          done <<<"$routes"
+          [ "$n" -eq 23 ] || { echo "::error::checked $n routes, not 23; this step is reading nothing"; exit 1; }
+          echo "ok: $n routes, each naming the service source it was read from"
 
       - name: No operator-only route is called from this buyer-and-seller surface
-        # GET /v1/disputes (server.ts:1015), the moderation routes (1051, 1064, 1086), PUT
-        # /v1/verifications (1112) and POST /v1/events (515) all require an operator or a signed
-        # event. Calling one would be building a 403 into a page and then explaining it.
+        # GET /v1/disputes, the moderation routes, PUT /v1/verifications and POST /v1/events
+        # (all in `market/src/server.ts`) require an operator or a signed event. Calling one would
+        # be building a 403 into a page and then explaining it.
         run: |
           set -uo pipefail
           if grep -rn --include='*.ts' --include='*.tsx' \
@@ -360,12 +405,12 @@ jobs:
   # already drifted:
   #
   #   generator  `cfctl release` pins one image per deployable, the name from
-  #              org/tools/registry.ts:367-369 (`ghcr.io/<org>/<repo.repo>`, which is why the package
+  #              org/tools/registry.ts (`ghcr.io/<org>/<repo.repo>`, which is why the package
   #              is micro-<app> and not <app>) and the tag from that repository's package.json
-  #              version, org/tools/cfctl.ts:962-968.
+  #              version, org/tools/cfctl.ts.
   #   verifier   `cfctl release --verify` runs `docker manifest inspect` on EVERY entry and returns
-  #              non-zero if one cannot be pulled, org/tools/cfctl.ts:997-1038.
-  #   deployer   deploy/scripts/release-deploy.sh:99-124 refuses to change anything while any image
+  #              non-zero if one cannot be pulled, org/tools/cfctl.ts.
+  #   deployer   deploy/scripts/release-deploy.sh refuses to change anything while any image
   #              is missing.
   #
   # A frontend with no producer was therefore a manifest entry that could never verify.

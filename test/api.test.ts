@@ -217,7 +217,7 @@ describe('auth callback', () => {
    * This block used to assert `trace[1].includes('/auth/exchange')` — a string lifted out of the
    * implementation and compared with itself, green for every possible value including the wrong
    * one it was pinning. **identity has never served `/auth/exchange`.** It serves
-   * `POST /auth/handoff/redeem` (`identity/src/server.ts:1084`), so every SSO callback in the
+   * `POST /auth/handoff/redeem` (`identity/src/server.ts`), so every SSO callback in the
    * estate 404'd, `consumeAuthCallback` returned null exactly as it does for a stale code, and it
    * read as an expiry rather than as a wrong address. This line stayed green throughout.
    *

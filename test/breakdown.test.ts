@@ -2,7 +2,7 @@
  * The breakdown a seller reads, and the sum it is rendered with.
  *
  * A settled order's parts are NOT recomputed from the rates here — they are the figures that went
- * into the ledger entry (`market/src/server.ts:1214-1217`). Recomputing them would produce numbers
+ * into the ledger entry (`market/src/server.ts`). Recomputing them would produce numbers
  * that *should* match, and would diverge silently the day the service's rounding changed. So the
  * test proves two different things:
  *

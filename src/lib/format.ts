@@ -6,7 +6,7 @@
  * A price on a marketplace is a claim about now. A bid is a claim about a moment that has almost
  * certainly passed by the time it is read, and an auction's leader is a number whose whole meaning
  * is when it was true. So every figure this app renders is rendered beside the instant it came
- * from — `placedAt` on a bid (`market/src/server.ts:857`), `settledAt` on an order (1222),
+ * from — `placedAt` on a bid (`market/src/server.ts`), `settledAt` on an order (1222),
  * `createdAt` on a listing (1201) — and where there is no instant, `stamp()` answers `null` and
  * the caller writes "not observed" rather than "just now".
  *

@@ -1,8 +1,8 @@
 /**
  * The key that stops one click becoming two orders.
  *
- * `market/src/server.ts:1152-1157` refuses a mutating request without an `Idempotency-Key`
- * matching `/^[A-Za-z0-9_:.-]{8,200}$/` (server.ts:237). Both halves are tested: the generator
+ * `market/src/server.ts` refuses a mutating request without an `Idempotency-Key`
+ * matching `/^[A-Za-z0-9_:.-]{8,200}$/` (server.ts). Both halves are tested: the generator
  * must produce keys the service accepts, and `idempotentHeaders` must refuse one it would not —
  * because a 400 saying "an Idempotency-Key header of 8 to 200 characters is required", for a key
  * this app generated, is a bug in this app failing where it was rejected rather than where it was
@@ -17,7 +17,7 @@ import {
   newIdempotencyKey,
 } from '../src/lib/idempotency.ts'
 
-describe('the pattern, restated from market/src/server.ts:237', () => {
+describe('the pattern, restated from market/src/server.ts', () => {
   it('is exactly the service’s own', () => {
     assert.equal(SAFE_IDEMPOTENCY_KEY.source, '^[A-Za-z0-9_:.-]{8,200}$')
   })

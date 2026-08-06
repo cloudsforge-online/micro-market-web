@@ -7,17 +7,17 @@
  * Two facts from `market/src/bids.ts` that a marketplace UI gets wrong by default:
  *
  *   1. **Anti-sniping extends the close.** A bid landing inside the extension window pushes
- *      `auction_ends_at` out (`bids.ts:250-261`), and the new time comes back on the bid response
- *      as `auctionEndsAt` — and ONLY when it extended (`server.ts:886`). So the close time on
+ *      `auction_ends_at` out (`bids.ts`), and the new time comes back on the bid response
+ *      as `auctionEndsAt` — and ONLY when it extended (`server.ts`). So the close time on
  *      screen is a value that changes, and a page that fetched it once and rendered it as fixed
  *      is a page that tells a bidder the auction has closed while it is still taking bids.
- *   2. **The reserve is secret and is checked at close.** `server.ts:1190-1191` keeps it off the
+ *   2. **The reserve is secret and is checked at close.** `server.ts` keeps it off the
  *      wire entirely, and `orders.ts` checks it when the auction ends. So the leading bid may be
  *      above every other bid and still not buy the item. Calling it "the price" is a claim this
  *      app cannot make.
  *
- * `minimumBid` is `leader + 1` (`market/src/money.ts:230-232`) — strictly greater, ties never
- * displace — and the service returns that minimum on a `bid_too_low` 409 (`server.ts:413-427`)
+ * `minimumBid` is `leader + 1` (`market/src/money.ts`) — strictly greater, ties never
+ * displace — and the service returns that minimum on a `bid_too_low` 409 (`server.ts`)
  * so a bidder can re-bid without guessing.
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  */
@@ -110,7 +110,7 @@ export interface BidFloor {
 /**
  * What a bidder must beat, computed the way the service computes it.
  *
- * `bids.ts:203` — `minimumBid(leader?.amount ?? null, listing.price ?? 1n)`. The listing's `price`
+ * `bids.ts` — `minimumBid(leader?.amount ?? null, listing.price ?? 1n)`. The listing's `price`
  * is the STARTING price for an auction, not a buy-now, and the service falls back to `1n` when
  * there is none. That fallback is reproduced rather than smoothed over: a form that offered a
  * different floor from the one the service enforces produces a 409 the bidder cannot explain.

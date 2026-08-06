@@ -13,7 +13,7 @@
  * listing nobody can link to is a listing nobody shares. So `/`, `/listings/*` and `/collections/*`
  * are open, and the two things that genuinely need a session ask for it: `/sell` and `/orders/*`
  * are wrapped in `ProtectedRoute`, because `GET /v1/orders` derives the subject from the token
- * (`market/src/server.ts:972`) and there is nothing to render without one.
+ * (`market/src/server.ts`) and there is nothing to render without one.
  *
  * `/fees` is public and deliberately so: 15-monetisation-model.md §3.4 sets the take rate at 250
  * bps of the sale paid by the seller, and a rate a seller cannot read before listing is a rate

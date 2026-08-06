@@ -6,7 +6,7 @@
  * `renew()` is called only after a SUCCESS, at which point the user's next click is a new intent.
  *
  * Minting inside the submit handler would produce a fresh key per click, which is precisely the
- * double-charge `market/src/server.ts:1137-1142` requires the header to prevent.
+ * double-charge `market/src/server.ts` requires the header to prevent.
  */
 import { useCallback, useState } from 'react'
 import { newIdempotencyKey } from './idempotency.ts'

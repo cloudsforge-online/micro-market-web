@@ -2,10 +2,10 @@
  * The responses the tier-1 scenarios are run against.
  *
  * Every shape here is the one `src/lib/market.ts` declares, and every field on it is one
- * `market/src/server.ts` emits at the line that module cites. A fixture invented from the client's
+ * `market/src/server.ts` emits. A fixture invented from the client's
  * imagination is how seven clients in this estate ended up written against surfaces that do not
- * exist (`.github/workflows/ci.yml`, "Every market route carries the line it was verified
- * against"), so these are built from the wire types rather than from prose.
+ * exist (`.github/workflows/ci.yml`, "Every market route names the service that serves it"), so
+ * these are built from the wire types rather than from prose.
  *
  * Doc 22 §4 names `micro-conformance` as the tier-2 stub source. There is no market corpus in it
  * today — `conformance/corpus/` holds mint, identity, trade, health, chain, game, entitlements and
@@ -173,7 +173,7 @@ export const SIGNED_IN = {
   'cf.refreshToken': 'refresh-token-stub',
 }
 
-/** `GET /auth/me` as `identity/src/server.ts:895-902` returns it: the profile is nested. */
+/** `GET /auth/me` as `identity/src/server.ts` returns it: the profile is nested. */
 export const ME = {
   user: { id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', handle: 'seller', roles: ['customer'] },
   session: { id: 'session-1' },

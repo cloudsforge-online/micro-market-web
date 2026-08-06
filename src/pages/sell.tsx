@@ -1,13 +1,13 @@
 /**
  * Sell: create a listing, and see your own — including the drafts nobody else can.
  *
- * Three calls: `GET /v1/listings?sellerSubject=` (server.ts:618, 626), `POST /v1/listings`
- * (server.ts:651) and `POST /v1/listings/:id/activate` (server.ts:742).
+ * Three calls: `GET /v1/listings?sellerSubject=` (server.ts, 626), `POST /v1/listings`
+ * (server.ts) and `POST /v1/listings/:id/activate` (server.ts).
  *
  * ── The activate step is where this page earns its keep ───────────────────────────────────────
  *
  * An `onchain` listing is created as a draft and then activated, and activation FAILS CLOSED on
- * the chain index (server.ts:756-763). Two different failures come back, and the estate has just
+ * the chain index (server.ts). Two different failures come back, and the estate has just
  * spent a release on a client that reported them as one:
  *
  *   503 `indexer_unavailable`  — we could not confirm. We do not know. Wait.
@@ -58,7 +58,7 @@ export function SellPage() {
   const load = useCallback(
     (signal: AbortSignal) => {
       if (!subject) return Promise.resolve({ listings: [] as readonly ListingView[] })
-      // NOT filtered by status: the default is `active` (server.ts:624), and a seller's own page
+      // NOT filtered by status: the default is `active` (server.ts), and a seller's own page
       // that hid their drafts would hide exactly the listings that still need activating.
       return listListings({ sellerSubject: subject, status: 'draft' }, { signal })
     },
@@ -173,7 +173,7 @@ function DraftRow({
     run(async () => {
       setDiagnosis(null)
       try {
-        // For a custodial listing the route reads no body fields at all (server.ts:754), so none is
+        // For a custodial listing the route reads no body fields at all (server.ts), so none is
         // sent. A field the route ignores is a field a seller will believe did something.
         await activateListing(intent.key, listing.id, onchain ? { onchainEscrowTx: tx, chain } : {})
         intent.renew()
@@ -339,7 +339,7 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
   /**
    * The preview.
    *
-   * `platformFeeBps` is NOT in this form: `server.ts:701` snapshots it from the service's own
+   * `platformFeeBps` is NOT in this form: `server.ts` snapshots it from the service's own
    * environment and never reads it from the body, so a field here would be a control that does
    * nothing. Until a listing exists there is no fee rate to show, so the preview shows the
    * royalty split and says the platform's cut is added by the service.
@@ -553,7 +553,7 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
       <p className="mk-note">
         Every field above is one the service actually reads. Two it does not — the platform fee and
         the dispute window — are set from its own configuration when the listing is created
-        (server.ts:701-702), which is why there is nowhere here to type them.
+        (server.ts), which is why there is nowhere here to type them.
       </p>
     </section>
   )

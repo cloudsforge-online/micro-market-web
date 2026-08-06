@@ -154,13 +154,13 @@ describe('shortRef — both ends kept', () => {
 })
 
 describe('the copy tables', () => {
-  it('has a word for every listing status the domain declares (listings.ts:62)', () => {
+  it('has a word for every listing status the domain declares (listings.ts)', () => {
     for (const status of ['draft', 'active', 'settling', 'sold', 'cancelled', 'expired']) {
       assert.ok(LISTING_STATUS_COPY[status], `no copy for ${status}`)
     }
   })
 
-  it('has a word for every asset kind (listings.ts:53-59)', () => {
+  it('has a word for every asset kind (listings.ts)', () => {
     for (const kind of ['token', 'game_item', 'entitlement', 'membership', 'brand_asset', 'collectible']) {
       assert.ok(ASSET_KIND_COPY[kind], `no copy for ${kind}`)
     }

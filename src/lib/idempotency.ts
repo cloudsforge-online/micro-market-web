@@ -4,10 +4,10 @@
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  * **THE HEADER IS REQUIRED, AND A KEY IDENTIFIES AN INTENT — NOT A REQUEST.**
  *
- * `market/src/server.ts:1152-1157` refuses any mutating request without a key matching
- * `/^[A-Za-z0-9_:.-]{8,200}$/` (`server.ts:237`). It is required rather than optional because
+ * `market/src/server.ts` refuses any mutating request without a key matching
+ * `/^[A-Za-z0-9_:.-]{8,200}$/` (`server.ts`). It is required rather than optional because
  * "the safe path is the one a client has to remember, and the unsafe one is the default — which
- * on a marketplace means a double-clicked Buy button charges twice" (server.ts:1137-1142).
+ * on a marketplace means a double-clicked Buy button charges twice" (server.ts).
  *
  * So the key is minted ONCE, when the user forms the intent (the form is mounted, the Buy button
  * is armed), and REUSED for every retry of that intent. A key minted per fetch would defeat the
@@ -15,16 +15,16 @@
  * holds one for the lifetime of the form and mints a fresh one only after a success.
  *
  * The service replays a repeat under the same key and answers 200 with `replayed: true` rather
- * than 201 (server.ts:1168-1173), so a second click reads back the FIRST order rather than
+ * than 201 (server.ts), so a second click reads back the FIRST order rather than
  * failing — which is why a client must never translate `replayed` into an error.
  *
  * A key reused with a genuinely DIFFERENT body is a 409 `idempotency_key_reused`
- * (server.ts:434-436), and that is a real error worth showing: it means this app sent two
+ * (server.ts), and that is a real error worth showing: it means this app sent two
  * different intents under one key, which is a bug here rather than a fault the user can fix.
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  */
 
-/** The header name, spelled once. `market/src/server.ts:240`. */
+/** The header name, spelled once. `market/src/server.ts`. */
 export const IDEMPOTENCY_HEADER = 'idempotency-key'
 
 /** The service's own pattern, restated so a bad key is caught before it costs a round trip. */

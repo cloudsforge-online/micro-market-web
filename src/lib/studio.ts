@@ -34,7 +34,7 @@
  * ## WHAT THIS FILE MAY NEVER SAY
  *
  * An uploaded image has a **recorded content address** and nothing more. Hearth has no Registry of
- * Authorship contract — `tessera/src/kiln.ts:373-392` records that the Solidity has never been
+ * Authorship contract — `tessera/src/kiln.ts` records that the Solidity has never been
  * written — so studio's `anchor.state` is `'unanchored'` on every asset in existence, and this app
  * must never render an image as "verified", "attested", "anchored" or "on-chain". A badge that
  * always passes, on a surface where people spend real money, teaches buyers to trust a check that

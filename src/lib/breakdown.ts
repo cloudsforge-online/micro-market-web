@@ -55,7 +55,7 @@ export interface Breakdown {
 /**
  * The breakdown of a SETTLED order, from the amounts the service actually posted.
  *
- * These are not recomputed from the rates. `orderWire` (`market/src/server.ts:1214-1217`) carries
+ * These are not recomputed from the rates. `orderWire` (`market/src/server.ts`) carries
  * `feeAmount`, `royaltyAmount` and `sellerProceeds` as the figures that went into the ledger
  * entry, and the per-recipient `royalties` array (1225-1228) as what each was paid. Recomputing
  * them from bps would produce numbers that *should* match and would silently diverge if the
@@ -99,9 +99,9 @@ export function orderBreakdown(order: OrderView): Breakdown {
  * The breakdown a seller is shown BEFORE they list: what a sale at this price would pay out.
  *
  * Computed with the same remainder-defined arithmetic as the service (`splitSale`,
- * `market/src/money.ts:150-186`) so the preview is the posting. `platformFeeBps` comes from the
+ * `market/src/money.ts`) so the preview is the posting. `platformFeeBps` comes from the
  * listing rather than from this app: the service snapshots it from its own environment at
- * creation (`server.ts:701`) and never reads it from the body, so it is a fact about the listing
+ * creation (`server.ts`) and never reads it from the body, so it is a fact about the listing
  * and not a number this bundle is entitled to choose.
  */
 export function previewBreakdown(input: {

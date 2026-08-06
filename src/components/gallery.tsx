@@ -19,7 +19,7 @@
  *
  * No tick, no shield, no "verified image", no checksum badge. An image here has a **recorded
  * content address** and NOT a chain attestation: Hearth has no Registry of Authorship contract
- * (`tessera/src/kiln.ts:373-392` — the Solidity has never been written), so studio's `anchor.state`
+ * (`tessera/src/kiln.ts` — the Solidity has never been written), so studio's `anchor.state`
  * is `'unanchored'` on every asset in existence. A badge derived from any of it would be a check
  * that always passes, shown to people about to spend real money. `src/lib/market.ts` states the
  * rule on the type; this file is where it would have been broken.

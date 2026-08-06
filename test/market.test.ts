@@ -15,9 +15,9 @@
  *
  * So this file asserts the OUTGOING call: the exact URL, the method, the query string, the body,
  * and the headers — including `Idempotency-Key`, which `micro-market` requires on every mutating
- * route (`server.ts:1152-1157`) and without which the request is a 400 before anything happens.
- * Each describe block carries the line of `market/src/server.ts` the route is declared on,
- * verified by reading `buildRoutes()` (server.ts:485-1130).
+ * route (`server.ts`) and without which the request is a 400 before anything happens.
+ * Each describe block names the route it exercises and the file that declares it,
+ * `market/src/server.ts` — `buildRoutes()`, never a line number in it.
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  */
 import assert from 'node:assert/strict'
@@ -65,11 +65,11 @@ import {
 
 /**
  * The service's base under `pnpm dev`: the page is on Vite's port and the service on its own, so
- * the request is absolute and cross-origin. `devPort: 4007`, `ui/packages/ui/src/surfaces.ts:232`.
+ * the request is absolute and cross-origin. `devPort: 4007`, `ui/packages/ui/src/surfaces.ts`.
  */
 const BASE = 'http://localhost:4007'
 
-/** A well-formed key. `SAFE_IDEMPOTENCY_KEY` at `market/src/server.ts:237`. */
+/** A well-formed key. `SAFE_IDEMPOTENCY_KEY` at `market/src/server.ts`. */
 const KEY = 'market-web:test:0123456789'
 const UUID = '11111111-2222-3333-4444-555555555555'
 
@@ -114,7 +114,7 @@ afterEach(() => {
 describe('the surface itself', () => {
   it('puts /v1 on every path, because this service does', async () => {
     // The inverse of the foresight defect: micro-foresight registers BARE paths and a client that
-    // added /v1 broke. micro-market registers /v1 on everything (server.ts:596-1128), so a client
+    // added /v1 broke. micro-market registers /v1 on everything (server.ts), so a client
     // that dropped it would break the same way in the other direction.
     await listListings()
     assert.ok(onlyCall().url.pathname.startsWith('/v1/'))
@@ -135,7 +135,7 @@ describe('the surface itself', () => {
 
 /* ------------------------------------------------------------------ collections */
 
-describe('GET /v1/collections — market/src/server.ts:596', () => {
+describe('GET /v1/collections — market/src/server.ts', () => {
   it('asks for /v1/collections', async () => {
     await listCollections()
     const call = onlyCall()
@@ -143,7 +143,7 @@ describe('GET /v1/collections — market/src/server.ts:596', () => {
     assert.equal(call.url.pathname, '/v1/collections')
   })
 
-  it('sends ownerSubject, which is the only parameter the route reads (server.ts:597)', async () => {
+  it('sends ownerSubject, which is the only parameter the route reads (server.ts)', async () => {
     await listCollections({ ownerSubject: 'user:abc' })
     const call = onlyCall()
     assert.equal(call.url.searchParams.get('ownerSubject'), 'user:abc')
@@ -162,8 +162,8 @@ describe('GET /v1/collections — market/src/server.ts:596', () => {
   })
 })
 
-describe('POST /v1/collections — market/src/server.ts:602', () => {
-  it('posts to /v1/collections with the four fields the route reads (server.ts:606-612)', async () => {
+describe('POST /v1/collections — market/src/server.ts', () => {
+  it('posts to /v1/collections with the four fields the route reads (server.ts)', async () => {
     await createCollection(KEY, { slug: 'kin', name: 'Kin', description: 'A set' })
     const call = onlyCall()
     assert.equal(call.method, 'POST')
@@ -176,7 +176,7 @@ describe('POST /v1/collections — market/src/server.ts:602', () => {
   })
 
   it('sends the idempotency key even though this route is not wrapped', async () => {
-    // server.ts:602 does NOT call withIdempotentRoute. The key costs nothing and is the habit that
+    // server.ts does NOT call withIdempotentRoute. The key costs nothing and is the habit that
     // keeps a mutating call from ever going without one.
     await createCollection(KEY, { slug: 'kin', name: 'Kin' })
     assert.equal(onlyCall().headers['idempotency-key'], KEY)
@@ -200,7 +200,7 @@ describe('POST /v1/collections — market/src/server.ts:602', () => {
 
 /* ------------------------------------------------------------------ listings */
 
-describe('GET /v1/listings — market/src/server.ts:618', () => {
+describe('GET /v1/listings — market/src/server.ts', () => {
   it('asks for /v1/listings', async () => {
     await listListings()
     const call = onlyCall()
@@ -209,7 +209,7 @@ describe('GET /v1/listings — market/src/server.ts:618', () => {
   })
 
   it('sends nothing at all when nothing is filtered', async () => {
-    // `status` defaults to `active` INSIDE the route (server.ts:624). Sending it explicitly would
+    // `status` defaults to `active` INSIDE the route (server.ts). Sending it explicitly would
     // be sending a value the route would have chosen anyway; sending it EMPTY would be a status no
     // row has, and the browse page would render as an empty market.
     await listListings()
@@ -236,8 +236,8 @@ describe('GET /v1/listings — market/src/server.ts:618', () => {
     assert.equal(call.url.searchParams.get('collectionId'), UUID)
   })
 
-  it('NEVER sends a limit: the route does not read one (server.ts:618-632)', async () => {
-    // `listListings` accepts a limit (listings.ts:702) but the route never passes one, so a
+  it('NEVER sends a limit: the route does not read one (server.ts)', async () => {
+    // `listListings` accepts a limit (listings.ts) but the route never passes one, so a
     // `limit=` here would be silently ignored — worse than a 400, because the client would believe
     // it had asked. There is no way to express one through this function at all.
     await listListings({ status: 'active' })
@@ -260,12 +260,12 @@ describe('GET /v1/listings — market/src/server.ts:618', () => {
     assert.equal(fetchStub.calls.length, 0)
   })
 
-  it('refuses an asset kind outside the set at server.ts:243-250', async () => {
+  it('refuses an asset kind outside the set at server.ts', async () => {
     await assert.rejects(() => listListings({ assetKind: 'weapon' as never }), /unknown asset kind/)
     assert.equal(fetchStub.calls.length, 0)
   })
 
-  it('accepts every status the domain declares (listings.ts:62)', () => {
+  it('accepts every status the domain declares (listings.ts)', () => {
     assert.deepEqual([...LISTING_STATUSES].sort(), [
       'active',
       'cancelled',
@@ -276,7 +276,7 @@ describe('GET /v1/listings — market/src/server.ts:618', () => {
     ])
   })
 
-  it('accepts every asset kind the route validates (server.ts:243-250)', () => {
+  it('accepts every asset kind the route validates (server.ts)', () => {
     assert.deepEqual([...ASSET_KINDS].sort(), [
       'brand_asset',
       'collectible',
@@ -299,7 +299,7 @@ describe('GET /v1/listings — market/src/server.ts:618', () => {
   })
 })
 
-describe('GET /v1/listings/:id — market/src/server.ts:636', () => {
+describe('GET /v1/listings/:id — market/src/server.ts', () => {
   it('puts the id in the path, not the query string', async () => {
     await getListing(UUID)
     const call = onlyCall()
@@ -310,7 +310,7 @@ describe('GET /v1/listings/:id — market/src/server.ts:636', () => {
 
   it('escapes an id that would otherwise change the path', async () => {
     await getListing('../orders')
-    // `itemIdOf` (server.ts:1315-1319) rejects anything that is not a uuid, but a path that
+    // `itemIdOf` (server.ts) rejects anything that is not a uuid, but a path that
     // TRAVERSED would reach a different route entirely before that check ran.
     assert.equal(onlyCall().url.pathname, '/v1/listings/..%2Forders')
   })
@@ -322,7 +322,7 @@ describe('GET /v1/listings/:id — market/src/server.ts:636', () => {
   })
 })
 
-describe('POST /v1/listings — market/src/server.ts:651', () => {
+describe('POST /v1/listings — market/src/server.ts', () => {
   const minimal = {
     assetKind: 'game_item' as const,
     pricingMode: 'fixed' as const,
@@ -346,26 +346,26 @@ describe('POST /v1/listings — market/src/server.ts:651', () => {
   })
 
   it('refuses a malformed key before it costs a round trip', async () => {
-    // server.ts:237 — 8 to 200 characters of [A-Za-z0-9_:.-]. A key with a space is a 400.
+    // server.ts — 8 to 200 characters of [A-Za-z0-9_:.-]. A key with a space is a 400.
     await assert.rejects(() => createListing('short', minimal), /idempotency key/)
     await assert.rejects(() => createListing('has a space!!', minimal), /idempotency key/)
     assert.equal(fetchStub.calls.length, 0)
   })
 
   it('sends the amount as a decimal STRING, never a JSON number', async () => {
-    // `parseAmount` (money.ts:222-227) refuses anything that is not a string of digits, so a
+    // `parseAmount` (money.ts) refuses anything that is not a string of digits, so a
     // number here is a 400 — and, before that, a price above 2^53 would already be wrong.
     await createListing(KEY, minimal)
     assert.equal(typeof bodyOf()['price'], 'string')
     assert.equal(bodyOf()['price'], '1000')
   })
 
-  it('sends no platformFeeBps: the route snapshots its own (server.ts:701)', async () => {
+  it('sends no platformFeeBps: the route snapshots its own (server.ts)', async () => {
     await createListing(KEY, minimal)
     assert.equal('platformFeeBps' in bodyOf(), false)
   })
 
-  it('sends no disputeWindowMs: the route sets it from settlement mode (server.ts:702)', async () => {
+  it('sends no disputeWindowMs: the route sets it from settlement mode (server.ts)', async () => {
     await createListing(KEY, minimal)
     assert.equal('disputeWindowMs' in bodyOf(), false)
   })
@@ -382,7 +382,7 @@ describe('POST /v1/listings — market/src/server.ts:651', () => {
   })
 
   it('sends a null price for an offers-only listing rather than omitting it', async () => {
-    // server.ts:664-666 reads `undefined` and `null` identically, but null is the explicit
+    // server.ts reads `undefined` and `null` identically, but null is the explicit
     // statement "there is no price", which is what an offers_only listing means.
     await createListing(KEY, { ...minimal, pricingMode: 'offers_only', price: null })
     assert.equal(bodyOf()['price'], null)
@@ -395,7 +395,7 @@ describe('POST /v1/listings — market/src/server.ts:651', () => {
   })
 })
 
-describe('POST /v1/listings/:id/activate — market/src/server.ts:742', () => {
+describe('POST /v1/listings/:id/activate — market/src/server.ts', () => {
   it('posts to the activate path under the listing', async () => {
     await activateListing(KEY, UUID, { onchainEscrowTx: '0xabc' })
     const call = onlyCall()
@@ -403,13 +403,13 @@ describe('POST /v1/listings/:id/activate — market/src/server.ts:742', () => {
     assert.equal(call.url.pathname, `/v1/listings/${UUID}/activate`)
   })
 
-  it('sends onchainEscrowTx and chain for an on-chain listing (server.ts:755-758)', async () => {
+  it('sends onchainEscrowTx and chain for an on-chain listing (server.ts)', async () => {
     await activateListing(KEY, UUID, { onchainEscrowTx: '0xabc', chain: 'ember' })
     assert.deepEqual(bodyOf(), { onchainEscrowTx: '0xabc', chain: 'ember' })
   })
 
   it('sends an EMPTY body for a custodial listing, because the route reads none', async () => {
-    // server.ts:754 only enters the escrow branch for `settlementMode === 'onchain'`. A field the
+    // server.ts only enters the escrow branch for `settlementMode === 'onchain'`. A field the
     // route ignores is a field a seller will believe did something.
     await activateListing(KEY, UUID)
     assert.deepEqual(bodyOf(), {})
@@ -421,7 +421,7 @@ describe('POST /v1/listings/:id/activate — market/src/server.ts:742', () => {
   })
 })
 
-describe('DELETE /v1/listings/:id — market/src/server.ts:776', () => {
+describe('DELETE /v1/listings/:id — market/src/server.ts', () => {
   it('sends DELETE to the listing itself', async () => {
     await cancelListing(KEY, UUID)
     const call = onlyCall()
@@ -429,7 +429,7 @@ describe('DELETE /v1/listings/:id — market/src/server.ts:776', () => {
     assert.equal(call.url.pathname, `/v1/listings/${UUID}`)
   })
 
-  it('sends no body: the reason is fixed by the service (server.ts:782)', async () => {
+  it('sends no body: the reason is fixed by the service (server.ts)', async () => {
     await cancelListing(KEY, UUID)
     assert.equal(onlyCall().body, undefined)
   })
@@ -440,7 +440,7 @@ describe('DELETE /v1/listings/:id — market/src/server.ts:776', () => {
   })
 })
 
-describe('GET /v1/listings/:id/risk — market/src/server.ts:790', () => {
+describe('GET /v1/listings/:id/risk — market/src/server.ts', () => {
   it('asks for the risk path under the listing', async () => {
     await getListingRisk(UUID)
     const call = onlyCall()
@@ -455,7 +455,7 @@ describe('GET /v1/listings/:id/risk — market/src/server.ts:790', () => {
   })
 
   it('reads a 200 with indicatorsAvailable:false as an answer, not an error', async () => {
-    // The route FAILS OPEN (server.ts:807-813): an unreachable indexer is a 200. A client that
+    // The route FAILS OPEN (server.ts): an unreachable indexer is a 200. A client that
     // only checked the status learns nothing, which is why escrow.ts reads the flag.
     fetchStub.restore()
     fetchStub = installFetch(() => json(200, { verification: null, indicators: [], indicatorsAvailable: false }))
@@ -466,8 +466,8 @@ describe('GET /v1/listings/:id/risk — market/src/server.ts:790', () => {
 
 /* ------------------------------------------------------------------ buying */
 
-describe('POST /v1/listings/:id/buy — market/src/server.ts:818', () => {
-  it('posts to the buy path with the amount only (server.ts:829)', async () => {
+describe('POST /v1/listings/:id/buy — market/src/server.ts', () => {
+  it('posts to the buy path with the amount only (server.ts)', async () => {
     await buyListing(KEY, UUID, { amount: '1000' })
     const call = onlyCall()
     assert.equal(call.method, 'POST')
@@ -475,7 +475,7 @@ describe('POST /v1/listings/:id/buy — market/src/server.ts:818', () => {
     assert.deepEqual(JSON.parse(call.body ?? '{}'), { amount: '1000' })
   })
 
-  it('sends no buyer subject: the route takes it from the token (server.ts:827)', async () => {
+  it('sends no buyer subject: the route takes it from the token (server.ts)', async () => {
     await buyListing(KEY, UUID, { amount: '1000' })
     const body = bodyOf()
     assert.equal('buyerSubject' in body, false)
@@ -496,7 +496,7 @@ describe('POST /v1/listings/:id/buy — market/src/server.ts:818', () => {
   })
 })
 
-describe('GET /v1/listings/:id/bids — market/src/server.ts:846', () => {
+describe('GET /v1/listings/:id/bids — market/src/server.ts', () => {
   it('asks for the bids path with no parameters', async () => {
     await listBids(UUID)
     const call = onlyCall()
@@ -512,8 +512,8 @@ describe('GET /v1/listings/:id/bids — market/src/server.ts:846', () => {
   })
 })
 
-describe('POST /v1/listings/:id/bids — market/src/server.ts:863', () => {
-  it('posts the amount, and only the amount (server.ts:873)', async () => {
+describe('POST /v1/listings/:id/bids — market/src/server.ts', () => {
+  it('posts the amount, and only the amount (server.ts)', async () => {
     await placeBid(KEY, UUID, { amount: '1200' })
     const call = onlyCall()
     assert.equal(call.method, 'POST')
@@ -527,7 +527,7 @@ describe('POST /v1/listings/:id/bids — market/src/server.ts:863', () => {
   })
 })
 
-describe('the bid_too_low refusal — market/src/server.ts:413-427', () => {
+describe('the bid_too_low refusal — market/src/server.ts', () => {
   it('reads `minimum` off the parsed body rather than out of the sentence', async () => {
     fetchStub.restore()
     fetchStub = installFetch(() =>
@@ -582,7 +582,7 @@ describe('the bid_too_low refusal — market/src/server.ts:413-427', () => {
 
 /* ------------------------------------------------------------------ offers */
 
-describe('GET /v1/listings/:id/offers — market/src/server.ts:893', () => {
+describe('GET /v1/listings/:id/offers — market/src/server.ts', () => {
   it('asks for the offers path with no parameters', async () => {
     await listOffers(UUID)
     const call = onlyCall()
@@ -592,7 +592,7 @@ describe('GET /v1/listings/:id/offers — market/src/server.ts:893', () => {
   })
 })
 
-describe('POST /v1/listings/:id/offers — market/src/server.ts:898', () => {
+describe('POST /v1/listings/:id/offers — market/src/server.ts', () => {
   it('posts the amount', async () => {
     await makeOffer(KEY, UUID, { amount: '900' })
     const call = onlyCall()
@@ -602,7 +602,7 @@ describe('POST /v1/listings/:id/offers — market/src/server.ts:898', () => {
   })
 
   it('OMITS expiresAt rather than sending an empty string', async () => {
-    // `readDate` (server.ts:1348-1354) refuses anything that is not a valid ISO 8601 string, so
+    // `readDate` (server.ts) refuses anything that is not a valid ISO 8601 string, so
     // `expiresAt: ''` is a 400 — and an absent field is the documented way to say "no expiry".
     await makeOffer(KEY, UUID, { amount: '900', expiresAt: '' })
     assert.equal('expiresAt' in bodyOf(), false)
@@ -619,7 +619,7 @@ describe('POST /v1/listings/:id/offers — market/src/server.ts:898', () => {
   })
 })
 
-describe('DELETE /v1/offers/:id — market/src/server.ts:917', () => {
+describe('DELETE /v1/offers/:id — market/src/server.ts', () => {
   it('sends DELETE to the offer, NOT to a path under the listing', async () => {
     // The offer routes are top-level: /v1/offers/:id, not /v1/listings/:id/offers/:id.
     await withdrawOffer(KEY, UUID)
@@ -629,7 +629,7 @@ describe('DELETE /v1/offers/:id — market/src/server.ts:917', () => {
     assert.equal(call.url.pathname.includes('/listings/'), false)
   })
 
-  it('sends no body: `to: withdrawn` is fixed by the service (server.ts:922)', async () => {
+  it('sends no body: `to: withdrawn` is fixed by the service (server.ts)', async () => {
     await withdrawOffer(KEY, UUID)
     assert.equal(onlyCall().body, undefined)
   })
@@ -696,7 +696,7 @@ describe('the listing image routes — market/src/server.ts, the listing-images 
   })
 })
 
-describe('POST /v1/offers/:id/accept — market/src/server.ts:931', () => {
+describe('POST /v1/offers/:id/accept — market/src/server.ts', () => {
   it('posts to the accept path under the offer', async () => {
     await acceptOffer(KEY, UUID)
     const call = onlyCall()
@@ -705,8 +705,8 @@ describe('POST /v1/offers/:id/accept — market/src/server.ts:931', () => {
   })
 
   it('sends NO amount: it settles at the offer’s amount, not the listing’s price', async () => {
-    // server.ts:948 passes `offer.amount`. An `amount` here would be a field the route ignores —
-    // and the fingerprint is taken over `{ offerId }` alone (server.ts:943), so it would not even
+    // server.ts passes `offer.amount`. An `amount` here would be a field the route ignores —
+    // and the fingerprint is taken over `{ offerId }` alone (server.ts), so it would not even
     // change the idempotency behaviour.
     await acceptOffer(KEY, UUID)
     assert.equal(onlyCall().body, undefined)
@@ -720,7 +720,7 @@ describe('POST /v1/offers/:id/accept — market/src/server.ts:931', () => {
 
 /* ------------------------------------------------------------------ orders and disputes */
 
-describe('GET /v1/orders — market/src/server.ts:969', () => {
+describe('GET /v1/orders — market/src/server.ts', () => {
   it('asks for /v1/orders with the role', async () => {
     await listOrders({ role: 'seller' })
     const call = onlyCall()
@@ -731,7 +731,7 @@ describe('GET /v1/orders — market/src/server.ts:969', () => {
   })
 
   it('sends `buyer` as a literal rather than relying on the route’s fallback', async () => {
-    // server.ts:973 reads `=== 'seller' ? 'seller' : 'buyer'`, so ANY other string means buyer.
+    // server.ts reads `=== 'seller' ? 'seller' : 'buyer'`, so ANY other string means buyer.
     // Sending the literal makes the request say what it means.
     await listOrders({ role: 'buyer' })
     assert.equal(onlyCall().url.searchParams.get('role'), 'buyer')
@@ -742,7 +742,7 @@ describe('GET /v1/orders — market/src/server.ts:969', () => {
     assert.equal(fetchStub.calls.length, 0)
   })
 
-  it('sends no subject: the route derives it from the token (server.ts:972)', async () => {
+  it('sends no subject: the route derives it from the token (server.ts)', async () => {
     await listOrders({ role: 'buyer' })
     const params = [...onlyCall().url.searchParams.keys()]
     assert.equal(params.includes('buyerSubject'), false)
@@ -756,7 +756,7 @@ describe('GET /v1/orders — market/src/server.ts:969', () => {
   })
 })
 
-describe('GET /v1/orders/:id — market/src/server.ts:980', () => {
+describe('GET /v1/orders/:id — market/src/server.ts', () => {
   it('puts the id in the path', async () => {
     await getOrder(UUID)
     const call = onlyCall()
@@ -780,7 +780,7 @@ describe('GET /v1/orders/:id — market/src/server.ts:980', () => {
   })
 })
 
-describe('POST /v1/orders/:id/disputes — market/src/server.ts:993', () => {
+describe('POST /v1/orders/:id/disputes — market/src/server.ts', () => {
   it('posts to the disputes path under the order', async () => {
     await openDispute(KEY, UUID, { reason: 'never arrived' })
     const call = onlyCall()
@@ -788,19 +788,19 @@ describe('POST /v1/orders/:id/disputes — market/src/server.ts:993', () => {
     assert.equal(call.url.pathname, `/v1/orders/${UUID}/disputes`)
   })
 
-  it('sends the reason, and only the reason (server.ts:1008)', async () => {
+  it('sends the reason, and only the reason (server.ts)', async () => {
     await openDispute(KEY, UUID, { reason: 'never arrived' })
     assert.deepEqual(bodyOf(), { reason: 'never arrived' })
   })
 
   it('carries the idempotency key — the fix for two disputes from one click', async () => {
-    // server.ts:998-1003: `openDispute` is a plain INSERT with no natural-key uniqueness, so an
+    // server.ts: `openDispute` is a plain INSERT with no natural-key uniqueness, so an
     // unwrapped retry opened TWO disputes on one order and froze the listing twice.
     await openDispute(KEY, UUID, { reason: 'never arrived' })
     assert.equal(onlyCall().headers['idempotency-key'], KEY)
   })
 
-  it('sends no raiser subject: the route takes it from the token (server.ts:1007)', async () => {
+  it('sends no raiser subject: the route takes it from the token (server.ts)', async () => {
     await openDispute(KEY, UUID, { reason: 'x' })
     assert.equal('raiserSubject' in bodyOf(), false)
   })
@@ -808,7 +808,7 @@ describe('POST /v1/orders/:id/disputes — market/src/server.ts:993', () => {
 
 /* ------------------------------------------------------------------ verification */
 
-describe('GET /v1/verifications/:urn — market/src/server.ts:1106', () => {
+describe('GET /v1/verifications/:urn — market/src/server.ts', () => {
   it('percent-encodes the URN into one path segment', async () => {
     await getVerification('cf:market:item:abc')
     assert.equal(onlyCall().url.pathname, '/v1/verifications/cf%3Amarket%3Aitem%3Aabc')
@@ -832,7 +832,7 @@ describe('GET /v1/verifications/:urn — market/src/server.ts:1106', () => {
 
 describe('the operator-only routes are never called from this surface', () => {
   /**
-   * `GET /v1/disputes` (server.ts:1015), `POST /v1/disputes/:id/resolve` (1025),
+   * `GET /v1/disputes` (server.ts), `POST /v1/disputes/:id/resolve` (1025),
    * `GET|POST /v1/moderation/cases` (1051, 1064), `POST /v1/moderation/cases/:id/resolve` (1086)
    * and `PUT /v1/verifications/:urn` (1112) all call `requireOperator`. This is a buyer-and-seller
    * surface: calling any of them would be building a 403 into a page and then explaining it.

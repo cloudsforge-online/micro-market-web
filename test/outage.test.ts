@@ -2,7 +2,7 @@
  * A read that failed is not an answer, and this file is where that stops being said twice.
  *
  * ══════════════════════════════════════════════════════════════════════════════════════════════
- * `src/lib/resource.ts:14-20` states the rule and gets it right: **FAILURE OUTRANKS EMPTINESS.**
+ * `src/lib/resource.ts` states the rule and gets it right: **FAILURE OUTRANKS EMPTINESS.**
  * "A request that threw has told us nothing about whether data exists, so reporting 'nothing here'
  * for a timeout is how an outage reads as a quiet week."
  *
@@ -11,8 +11,8 @@
  * `state === 'ok'` branch where the fallback can never fire. Two are not, and both turn a failed
  * upstream into a confident sentence:
  *
- *   `listing.tsx:128`  `const allBids = bids.data?.bids ?? []`
- *   `collections.tsx:115`  `collections.data?.collections.find(...) ?? null`
+ *   `listing.tsx`  `const allBids = bids.data?.bids ?? []`
+ *   `collections.tsx`  `collections.data?.collections.find(...) ?? null`
  *
  * The estate has met this before: `hasAnswer(t) ? t.data : []` made wallet panels say "There is no
  * balance to send" during an outage. The three scenarios below are this surface's version, and one
@@ -66,7 +66,7 @@ function panelOf(el: Element): Element {
 
 describe('a failed bids read is never rendered as “there are no bids”', () => {
   it('the bid form does not state a minimum it could not compute', async () => {
-    // THE ONE THAT COSTS MONEY. `bidFloorFrom` is a faithful port of `market/src/bids.ts:203` —
+    // THE ONE THAT COSTS MONEY. `bidFloorFrom` is a faithful port of `market/src/bids.ts` —
     // `minimumBid(leader?.amount ?? null, listing.price ?? 1n)` — and it is fed `leaderAmount`,
     // which came from `bids.data?.bids ?? []`. With the bids read down that array is empty, the
     // floor comes out as the STARTING price, and the form tells the bidder in plain words that
@@ -110,7 +110,7 @@ describe('a failed bids read is never rendered as “there are no bids”', () =
           s.text(),
           /there is no price to split yet/i,
           'a 500 from the bids route was rendered as "there is no price to split yet" — an ' +
-            'outage reading as a quiet auction (src/lib/resource.ts:14-20)',
+            'outage reading as a quiet auction (src/lib/resource.ts)',
         )
         assert.doesNotMatch(
           s.text(),
@@ -185,7 +185,7 @@ describe('a collection whose details have not arrived yet is not reported as unr
           s.text(),
           /could not read this collection/i,
           'the page announced a failure before the request it describes had answered. A read in ' +
-            'flight is not a read that failed — src/lib/resource.ts:14-20.',
+            'flight is not a read that failed — src/lib/resource.ts.',
         )
         await s.settle(80)
         assert.match(s.text(), /Old things from the first age/, 'the collection never rendered')

@@ -132,7 +132,7 @@ describe('sortListings', () => {
     )
   })
 
-  it('orders newest first, matching the route’s own order (listings.ts:711)', () => {
+  it('orders newest first, matching the route’s own order (listings.ts)', () => {
     const byDate = [
       listing({ id: 'old', createdAt: '2026-07-01T00:00:00.000Z' }),
       listing({ id: 'new', createdAt: '2026-08-01T00:00:00.000Z' }),
@@ -161,7 +161,7 @@ describe('searchScopeNote — saying what was actually searched', () => {
   })
 
   it('warns when the page is at the route’s cap, because there may be more', () => {
-    // `listings.ts:702` defaults the limit to 50 and the route passes none, so a full page means
+    // `listings.ts` defaults the limit to 50 and the route passes none, so a full page means
     // there is no way to see the rest — which a reader has to be told.
     const note = searchScopeNote(PAGE_CAP, PAGE_CAP, '')
     assert.match(note, /most this page can request/i)

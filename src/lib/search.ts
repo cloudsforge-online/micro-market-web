@@ -4,9 +4,9 @@
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  * **`micro-market` HAS NO TEXT SEARCH, AND THIS FILE DOES NOT PRETEND OTHERWISE.**
  *
- * `GET /v1/listings` (`market/src/server.ts:618-634`) reads exactly four query parameters —
+ * `GET /v1/listings` (`market/src/server.ts`) reads exactly four query parameters —
  * `status`, `assetKind`, `sellerSubject`, `collectionId` — and nothing else. There is no `q`, no
- * `search`, no `text`. `listListings` also accepts a `limit` (`listings.ts:702`) that the route
+ * `search`, no `text`. `listListings` also accepts a `limit` (`listings.ts`) that the route
  * never passes, so the answer is capped at that function's default of **50** and there is no way
  * to ask for the next page.
  *
@@ -62,7 +62,7 @@ export const SORTS: ReadonlyArray<{ key: SortKey; label: string }> = [
 /**
  * Sort listings, with the unpriced and the undated pushed to the end rather than treated as zero.
  *
- * A listing with `price: null` is an `offers_only` listing (`server.ts:1189`), and sorting it as
+ * A listing with `price: null` is an `offers_only` listing (`server.ts`), and sorting it as
  * if it cost nothing would put every "make me an offer" at the top of "cheapest first". Missing is
  * missing. The comparison is `bigint`, so a price larger than 2^53 orders correctly.
  */
@@ -97,7 +97,7 @@ export function sortListings(
       })
     case 'newest':
     default:
-      // The route already orders by `created_at desc` (`listings.ts:711`); restated so that a
+      // The route already orders by `created_at desc` (`listings.ts`); restated so that a
       // reader switching back from another sort gets the same order they started with.
       return copy.sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0))
   }
@@ -107,7 +107,7 @@ export function sortListings(
  * The sentence under the search box.
  *
  * It names what was actually searched. `total` is what the route returned — capped at 50 by
- * `listings.ts:702` with no way to ask for more — and saying so is the difference between a
+ * `listings.ts` with no way to ask for more — and saying so is the difference between a
  * reader who knows to narrow the filters and one who concludes the item is gone.
  */
 export function searchScopeNote(shown: number, total: number, query: string): string {
@@ -124,5 +124,5 @@ export function searchScopeNote(shown: number, total: number, query: string): st
   )
 }
 
-/** `listListings`' own default, and the route's effective page size — `market/src/listings.ts:702`. */
+/** `listListings`' own default, and the route's effective page size — `market/src/listings.ts`. */
 export const PAGE_CAP = 50

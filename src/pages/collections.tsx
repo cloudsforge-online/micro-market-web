@@ -1,11 +1,11 @@
 /**
  * Collections: a shopfront, and the listings inside one.
  *
- * `GET /v1/collections` (server.ts:596) for the index, and `GET /v1/listings?collectionId=`
- * (server.ts:629) for one collection's listings. Both public — a collection behind a sign-in is a
+ * `GET /v1/collections` (server.ts) for the index, and `GET /v1/listings?collectionId=`
+ * (server.ts) for one collection's listings. Both public — a collection behind a sign-in is a
  * shopfront nobody can link to.
  *
- * A collection carries its OWN royalty recipients (`market/src/listings.ts:153-166`), which are
+ * A collection carries its OWN royalty recipients (`market/src/listings.ts`), which are
  * what a listing inside it inherits when it is created without its own. They are shown in basis
  * points here rather than as amounts, because until there is a sale price there is no amount —
  * and a percentage rendered as money is a number somebody will quote back.
@@ -87,7 +87,7 @@ function CollectionCard({ collection }: { collection: CollectionView }) {
       </p>
       {collection.royalties.length > 0 && (
         <p className="mk-card__stamp">
-          {/* The shares are of the ROYALTY, not of the price — `market/src/money.ts:118-119`. So
+          {/* The shares are of the ROYALTY, not of the price — `market/src/money.ts`. So
               they sum to 100% of the royalty, and saying "of the royalty" is what stops a reader
               adding them to the platform fee. */}
           Royalty split across {collection.royalties.length}{' '}
