@@ -104,7 +104,7 @@ export function ModerationNotice({ listing }: { listing: ListingView }) {
  */
 export function VerificationBadge({ verification }: { verification: VerificationView | null }) {
   if (verification === null) {
-    return <Badge tone="unknown" label="Not reviewed" title="Nobody has reviewed this item" />
+    return <Badge tone="unknown" label="Nobody has looked" title="No reviewer has ever examined this item" />
   }
   const reviewed = utcDateTime(verification.reviewedAt)
   const suffix = reviewed === null ? 'Never reviewed' : `Reviewed ${reviewed}`
@@ -114,10 +114,10 @@ export function VerificationBadge({ verification }: { verification: Verification
     case 'flagged':
       return <Badge tone="warn" label="Flagged" title={suffix} />
     case 'claimed':
-      return <Badge tone="neutral" label="Claimed, not verified" title={suffix} />
+      return <Badge tone="neutral" label="Claimed, unproven" title={suffix} />
     case 'unverified':
     default:
-      return <Badge tone="neutral" label="Reviewed, not verified" title={suffix} />
+      return <Badge tone="neutral" label="Looked at, not confirmed" title={suffix} />
   }
 }
 
@@ -134,12 +134,12 @@ export function RiskPanel({ knowledge }: { knowledge: RiskKnowledge }) {
     <section className="mk-panel" aria-labelledby="mk-risk-title">
       <div className="mk-panel__head">
         <h2 className="mk-panel__title" id="mk-risk-title">
-          What the chain says
+          What the chain shows
         </h2>
         {knowledge.known ? (
           <Badge tone="neutral" label={`${knowledge.indicators.length} checked`} />
         ) : (
-          <Badge tone="unknown" label="Not checked" />
+          <Badge tone="unknown" label="Nothing read" />
         )}
       </div>
       <p className="mk-panel__body">{knowledge.note}</p>
@@ -167,9 +167,10 @@ export function RiskPanel({ knowledge }: { knowledge: RiskKnowledge }) {
         </ul>
       )}
       <p className="mk-note">
-        These are facts about the chain that anyone could check, not advice and not a score. There
-        is no rating here on purpose: a score hides its inputs and becomes a specification for the
-        minimum work required to look safe.
+        Each line above is something anybody could go and check for themselves. None of it is
+        advice, and there is deliberately no number attached. A rating buries what went into it,
+        and once published it stops describing risk and starts describing the least a seller has
+        to do to appear respectable.
       </p>
     </section>
   )

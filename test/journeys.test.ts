@@ -240,16 +240,16 @@ describe('BJ-MKT — Forge Market', () => {
         assert.ok(s.text().includes('urn:cf:token:hearth:testnet:0xabc'))
         // Still buyable: the control exists. Doc 22 BJ-MKT-02 — "the listing still renders and is
         // still buyable".
-        assert.ok(s.queryByRole('button', 'Buy now'), 'the Buy control was withdrawn by an unrelated failure')
+        assert.ok(s.queryByRole('button', 'Buy it now'), 'the Buy control was withdrawn by an unrelated failure')
         // And the page NAMES what is missing rather than showing less and saying nothing.
         assert.match(
           s.text(),
-          /could not fetch the chain facts/i,
+          /could not reach the chain/i,
           'the risk panel failed silently — the reader is not told the chain facts are missing',
         )
         assert.match(
           s.text(),
-          /nothing here should be read as a clean bill of health/i,
+          /do not read the gap as reassurance/i,
           'a missing risk answer must not read as a clean one',
         )
       },
@@ -271,7 +271,7 @@ describe('BJ-MKT — Forge Market', () => {
       },
       async (s) => {
         // Doc 22: "platform fee and royalty split in bps are on screen BEFORE confirmation".
-        s.before('Where the money would go', 'Buy it', 'the split has to be readable before the commit')
+        s.before('How the money would divide', 'Take it', 'the split has to be readable before the commit')
         assert.match(s.text(), /platform fee[^%]{0,40}2\.5\s?%/i, 'the platform fee rate is not on screen')
         assert.match(s.text(), /royalty[^%]{0,40}5\s?%/i, 'the royalty split is not on screen')
 
@@ -279,7 +279,7 @@ describe('BJ-MKT — Forge Market', () => {
         const shown = formatMoney(BigInt(detail.listing.price ?? '0'), detail.listing.assetCode)
         assert.ok(s.text().includes(shown.text), `the price ${shown.text} is not rendered`)
 
-        await s.click(s.byRole('button', 'Buy now'))
+        await s.click(s.byRole('button', 'Buy it now'))
 
         // …and the number the client SENT. Byte-identical to the response's own string, which is
         // what closes the loop: the same bigint produced the rendered text and the request body.
@@ -308,7 +308,7 @@ describe('BJ-MKT — Forge Market', () => {
         }),
       },
       async (s) => {
-        const buy = s.byRole('button', 'Buy now')
+        const buy = s.byRole('button', 'Buy it now')
         // Both presses land before the first response — which is the hazard. `clickNoFlush` is
         // deliberate: awaiting between them would test a case a double-click never produces.
         s.clickNoFlush(buy)
@@ -345,7 +345,7 @@ describe('BJ-MKT — Forge Market', () => {
         }),
       },
       async (s) => {
-        await s.click(s.byRole('button', 'Buy now'))
+        await s.click(s.byRole('button', 'Buy it now'))
         const outcome = s.document.querySelector('[role="status"], [role="alert"]')
         assert.ok(outcome, 'pressing Buy produced no outcome message at all')
         assert.equal(
@@ -375,7 +375,7 @@ describe('BJ-MKT — Forge Market', () => {
         }),
       },
       async (s) => {
-        await s.click(s.byRole('button', 'Buy now'))
+        await s.click(s.byRole('button', 'Buy it now'))
         const alert = s.document.querySelector('[role="alert"]')
         assert.ok(alert, 'a reused key was not announced as an alert')
         assert.match(s.textOf(alert), /different request body/i)
@@ -398,14 +398,14 @@ describe('BJ-MKT — Forge Market', () => {
         }),
       },
       async (s) => {
-        const buy = s.byRole('button', 'Buy now')
+        const buy = s.byRole('button', 'Buy it now')
         await s.click(buy)
         // The order is settled and the page offers the way onward.
-        assert.ok(s.queryByRole('link', 'See the order'), 'a settled purchase offers no route to the order')
+        assert.ok(s.queryByRole('link', 'Open the order'), 'a settled purchase offers no route to the order')
 
         // Pressing again is a NEW intent, not a re-arm of the settled one. That is the property
         // that makes a back-button harmless here: there is no second step holding the old key.
-        await s.click(s.byRole('button', 'Buy now'))
+        await s.click(s.byRole('button', 'Buy it now'))
         const posted = s.api.matching(`POST /v1/listings/${fx.LISTING_ID}/buy`)
         assert.equal(posted.length, 2)
         assert.notEqual(
@@ -521,7 +521,7 @@ describe('BJ-MKT — Forge Market', () => {
       async (s) => {
         const reason = s.allByRole('combobox')[0] ?? s.allByRole('textbox')[0]
         if (reason) await s.type(reason, 'not_as_described')
-        await s.click(s.byRole('button', /raise|open a dispute|dispute/i))
+        await s.click(s.byRole('button', /flag this sale/i))
         const text = s.text()
         // The two facts that ARE visible to the parties.
         assert.match(text, /proceeds/i)
@@ -530,7 +530,7 @@ describe('BJ-MKT — Forge Market', () => {
         // surface cannot read the dispute's state back and must not imply that it can.
         assert.match(
           text,
-          /we cannot show you its progress here/i,
+          /will not be able to follow it on this page/i,
           'the page invented a dispute status. GET /v1/disputes needs an operator ' +
             '(market/src/server.ts), so this surface cannot read one back.',
         )
@@ -608,7 +608,7 @@ describe('BJ-MKT — Forge Market', () => {
       assert.match(s.text(), /250 basis points/i)
       assert.match(
         s.text(),
-        /fixed onto a listing when the listing is created/i,
+        /stamped onto it/i,
         'the page must say these figures are the platform position rather than the rate charged',
       )
     })
@@ -664,7 +664,7 @@ describe('BJ-MKT — Forge Market', () => {
         // that rule is `market/src/moderation.ts`'s and is cited in ownedBy.
         assert.match(s.text(), /under review/i)
         assert.equal(
-          s.queryByRole('button', 'Buy now'),
+          s.queryByRole('button', 'Buy it now'),
           null,
           'a frozen listing still offered a Buy control',
         )
@@ -699,7 +699,7 @@ describe('BJ-ADV — the adversarial matrix', () => {
       },
       async (s) => {
         await s.type(s.allByRole('textbox')[0] as Element, '2000000000000000000')
-        const button = s.byRole('button', 'Bid')
+        const button = s.byRole('button', 'Place this bid')
         s.clickNoFlush(button)
         s.clickNoFlush(button)
         await s.settle(30)
@@ -732,7 +732,7 @@ describe('BJ-ADV — the adversarial matrix', () => {
       async (s) => {
         const field = s.allByRole('textbox')[0] as Element
         await s.type(field, '2000000000000000001')
-        await s.click(s.byRole('button', 'Bid'))
+        await s.click(s.byRole('button', 'Place this bid'))
         const posted = s.api.matching(`POST /v1/listings/${fx.LISTING_ID}/bids`)[0]
         assert.equal(
           (posted?.json as { amount?: string } | undefined)?.amount,
@@ -765,13 +765,13 @@ describe('BJ-ADV — the adversarial matrix', () => {
         }),
       },
       async (s) => {
-        await s.click(s.byRole('button', 'Buy now'))
+        await s.click(s.byRole('button', 'Buy it now'))
         const alert = s.document.querySelector('[role="alert"]')
         assert.ok(alert, 'a failed purchase left no failure on screen')
         assert.match(s.textOf(alert), /the ledger did not answer/i)
         assert.match(s.textOf(alert), /req-buyfail-77/)
         // The button is armed again rather than left saying "Buying…" for ever.
-        assert.ok(s.queryByRole('button', 'Buy now'), 'the control was left in its busy state')
+        assert.ok(s.queryByRole('button', 'Buy it now'), 'the control was left in its busy state')
       },
     )
   })
@@ -790,7 +790,7 @@ describe('BJ-ADV — the adversarial matrix', () => {
         }),
       },
       async (s) => {
-        assert.equal(s.queryByRole('button', 'Buy now'), null, 'a Buy control was offered over a failed read')
+        assert.equal(s.queryByRole('button', 'Buy it now'), null, 'a Buy control was offered over a failed read')
         const alert = s.document.querySelector('[role="alert"]')
         assert.ok(alert, 'a failed listing read produced no alert')
         assert.match(s.textOf(alert), /req-degraded-1/, 'the failure carries no request id to quote')
@@ -817,7 +817,7 @@ describe('BJ-ADV — the adversarial matrix', () => {
       async (s) => {
         await s.settle(20)
         await fillSellForm(s)
-        const create = s.byRole('button', /create/i)
+        const create = s.byRole('button', /save this as a draft/i)
         s.clickNoFlush(create)
         s.clickNoFlush(create)
         await s.settle(30)
@@ -845,7 +845,7 @@ describe('BJ-ADV — the adversarial matrix', () => {
       async (s) => {
         await s.settle(20)
         const urn = await fillSellForm(s)
-        await s.click(s.byRole('button', /create/i))
+        await s.click(s.byRole('button', /save this as a draft/i))
         assert.match(s.text(), /that item urn is not one this seller owns/i)
         assert.match(s.text(), /req-create-fail/)
         // 05:91 makes form-state preservation the requirement, and a form that clears on a
@@ -911,7 +911,7 @@ describe('BJ-ADV — the adversarial matrix', () => {
       async (s) => {
         const reason = s.allByRole('combobox')[0] ?? s.allByRole('textbox')[0]
         if (reason) await s.type(reason, 'not_as_described')
-        const button = s.byRole('button', /raise|dispute/i)
+        const button = s.byRole('button', /flag this sale/i)
         s.clickNoFlush(button)
         s.clickNoFlush(button)
         await s.settle(30)
@@ -953,7 +953,7 @@ describe('BJ-ADV — the adversarial matrix', () => {
       async (s) => {
         const reason = s.allByRole('textbox')[0] as Element
         await s.type(reason, 'not as described')
-        await s.click(s.byRole('button', /raise/i))
+        await s.click(s.byRole('button', /flag this sale/i))
         // The commit control is GONE once the dispute is raised — replaced by the confirmation,
         // not left disabled beside it. There is nothing on the page a back-button could re-arm,
         // which is what H2 is about: "the previous step does not re-arm a second commit against
@@ -987,7 +987,7 @@ describe('BJ-ADV — the adversarial matrix', () => {
       },
       async (s) => {
         await s.type(s.allByRole('textbox')[0] as Element, 'not as described')
-        await s.click(s.byRole('button', /raise/i))
+        await s.click(s.byRole('button', /flag this sale/i))
         const alert = s.document.querySelector('[role="alert"]')
         assert.ok(alert, 'a failed dispute left nothing on screen')
         assert.match(s.textOf(alert), /moderation did not answer/i)
@@ -996,7 +996,7 @@ describe('BJ-ADV — the adversarial matrix', () => {
         // from is the failure H4 names.
         assert.ok(s.text().includes(fx.ORDER_ID.slice(0, 8)) || /proceeds/i.test(s.text()))
         // And the control is armed again rather than left saying "Opening…".
-        assert.ok(s.queryByRole('button', /raise/i))
+        assert.ok(s.queryByRole('button', /flag this sale/i))
       },
     )
   })
@@ -1014,9 +1014,9 @@ describe('BJ-ADV — the adversarial matrix', () => {
       async (s) => {
         // The listing painted with two of its four reads still in flight.
         assert.ok(s.text().includes('urn:cf:token:hearth:testnet:0xabc'))
-        assert.ok(s.queryByRole('button', 'Buy now'), 'the page waited for an unrelated slow read')
+        assert.ok(s.queryByRole('button', 'Buy it now'), 'the page waited for an unrelated slow read')
         // And the slow ones are marked pending rather than rendered as absent or as zero.
-        assert.match(s.text(), /reading the chain|loading/i)
+        assert.match(s.text(), /looking the item up on chain|reading them/i)
         await s.settle(80)
         assert.match(s.text(), /verified/i, 'the slow read never landed')
       },
@@ -1370,7 +1370,7 @@ async function fillSellForm(s: Screen): Promise<string> {
     boxes.find((el) => want.test(labelFor(el)))
   const urnField = byLabel(/urn|item/i) ?? boxes[0]
   if (urnField) await s.type(urnField, urn)
-  const price = byLabel(/price|amount/i)
+  const price = byLabel(/asking|bidding opens|price|amount/i)
   if (price) await s.type(price, '2500000000000000000')
   const quantity = byLabel(/quantity/i)
   if (quantity) await s.type(quantity, '1')

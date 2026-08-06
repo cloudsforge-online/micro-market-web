@@ -160,12 +160,12 @@ for (const strict of [false, true]) {
           }),
         },
         async (s) => {
-          const buy = s.byRole('button', 'Buy now')
+          const buy = s.byRole('button', 'Buy it now')
           s.clickNoFlush(buy)
           s.clickNoFlush(buy)
           // Mid-flight: React has committed the busy render, the stub has not answered.
           await s.settle(5)
-          assertBusy(s, buy, /buying/i)
+          assertBusy(s, buy, /going through/i)
           await s.settle(60)
           const posted = s.api.matching(path)
           assert.equal(
@@ -199,12 +199,12 @@ for (const strict of [false, true]) {
         },
         async (s) => {
           await s.type(s.allByRole('textbox')[0] as Element, '2000000000000000000')
-          const button = s.byRole('button', 'Bid')
+          const button = s.byRole('button', 'Place this bid')
           s.clickNoFlush(button)
           s.clickNoFlush(button)
           // Mid-flight: React has committed the busy render, the stub has not answered.
           await s.settle(5)
-          assertBusy(s, button, /bidding/i)
+          assertBusy(s, button, /placing it/i)
           await s.settle(60)
           const posted = s.api.matching(path)
           assert.equal(
@@ -236,15 +236,15 @@ for (const strict of [false, true]) {
           }),
         },
         async (s) => {
-          const amount = labelled(s, /your offer/i)
+          const amount = labelled(s, /you are offering/i)
           assert.ok(amount, 'the offer form has no amount field')
           await s.type(amount, '2000000000000000000')
-          const button = s.byRole('button', /^offer/i)
+          const button = s.byRole('button', /^send this offer/i)
           s.clickNoFlush(button)
           s.clickNoFlush(button)
           // Mid-flight: React has committed the busy render, the stub has not answered.
           await s.settle(5)
-          assertBusy(s, button, /offering/i)
+          assertBusy(s, button, /sending it/i)
           await s.settle(60)
           const posted = s.api.matching(path)
           assert.equal(
@@ -316,12 +316,12 @@ for (const strict of [false, true]) {
         async (s) => {
           await s.settle(20)
           await fillSellForm(s)
-          const create = s.byRole('button', /create/i)
+          const create = s.byRole('button', /save this as a draft/i)
           s.clickNoFlush(create)
           s.clickNoFlush(create)
           // Mid-flight: React has committed the busy render, the stub has not answered.
           await s.settle(5)
-          assertBusy(s, create, /creating/i)
+          assertBusy(s, create, /saving/i)
           await s.settle(60)
           const posted = s.api.matching('POST /v1/listings')
           assert.equal(
@@ -358,12 +358,12 @@ for (const strict of [false, true]) {
         },
         async (s) => {
           await s.type(s.allByRole('textbox')[0] as Element, 'it never arrived')
-          const button = s.byRole('button', /raise a dispute/i)
+          const button = s.byRole('button', /flag this sale/i)
           s.clickNoFlush(button)
           s.clickNoFlush(button)
           // Mid-flight: React has committed the busy render, the stub has not answered.
           await s.settle(5)
-          assertBusy(s, button, /opening/i)
+          assertBusy(s, button, /sending/i)
           await s.settle(60)
           const posted = s.api.matching(path)
           assert.equal(
@@ -414,7 +414,7 @@ describe('a purchase that went through is never reported as failed', () => {
           }),
         },
         async (s) => {
-          const buy = s.byRole('button', 'Buy now')
+          const buy = s.byRole('button', 'Buy it now')
           s.clickNoFlush(buy)
           s.clickNoFlush(buy)
 
@@ -436,7 +436,7 @@ describe('a purchase that went through is never reported as failed', () => {
 
           await s.settle(60)
           assert.equal(s.api.matching(path).length, 1, 'two purchases left the browser')
-          assert.match(s.text(), /Bought|already gone through/i, 'the purchase was never confirmed')
+          assert.match(s.text(), /it is yours|already gone through/i, 'the purchase was never confirmed')
         },
       )
     })
@@ -461,7 +461,7 @@ describe('a purchase that went through is never reported as failed', () => {
         }),
       },
       async (s) => {
-        const buy = s.byRole('button', 'Buy now')
+        const buy = s.byRole('button', 'Buy it now')
         s.clickNoFlush(buy)
         s.clickNoFlush(buy)
         await s.settle(80)
@@ -473,7 +473,7 @@ describe('a purchase that went through is never reported as failed', () => {
           'the buyer is left looking at "The purchase did not go through." for an order that ' +
             'exists, has been paid for, and is linked from this very page',
         )
-        assert.match(s.text(), /Bought|already gone through/i, 'the purchase was never confirmed')
+        assert.match(s.text(), /it is yours|already gone through/i, 'the purchase was never confirmed')
         assert.equal(s.api.matching(path).length, 1, 'two purchases left the browser')
       },
     )
@@ -502,9 +502,9 @@ describe('the intent key is minted once per intent, StrictMode included', () => 
         }),
       },
       async (s) => {
-        const buy = s.byRole('button', 'Buy now')
+        const buy = s.byRole('button', 'Buy it now')
         await s.click(buy)
-        await s.click(s.byRole('button', 'Buy now'))
+        await s.click(s.byRole('button', 'Buy it now'))
         const posted = s.api.matching(path)
         assert.equal(posted.length, 2, 'a retry after a failure did not go out')
         const keys = new Set(posted.map((p) => p.headers['idempotency-key']))
@@ -533,7 +533,7 @@ describe('the intent key is minted once per intent, StrictMode included', () => 
         }),
       },
       async (s) => {
-        await s.click(s.byRole('button', 'Buy now'))
+        await s.click(s.byRole('button', 'Buy it now'))
         const posted = s.api.matching(path)
         assert.equal(posted.length, 1, 'one press did not produce exactly one purchase')
         assert.match(posted[0]?.headers['idempotency-key'] ?? '', /^market-web:buy:/)
@@ -645,7 +645,7 @@ const DISPUTE = {
 async function fillSellForm(s: Screen): Promise<void> {
   const urn = labelled(s, /urn/i) ?? s.allByRole('textbox')[0]
   if (urn) await s.type(urn, 'urn:cf:token:hearth:testnet:0xfeedface')
-  const price = labelled(s, /price/i)
+  const price = labelled(s, /asking price|bidding opens|price/i)
   if (price) await s.type(price, '2500000000000000000')
   const quantity = labelled(s, /quantity/i)
   if (quantity) await s.type(quantity, '1')

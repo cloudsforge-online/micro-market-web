@@ -80,17 +80,17 @@ describe('a failed bids read is never rendered as “there are no bids”', () =
       listingAt(),
       { url: `${ORIGIN}/listings/${fx.LISTING_ID}`, routes: bidsDown() },
       async (s) => {
-        const form = panelOf(s.byRole('button', 'Bid'))
+        const form = panelOf(s.byRole('button', 'Place this bid'))
         assert.doesNotMatch(
           s.textOf(form),
-          /smallest bid this auction will take is/i,
+          /least you can bid right now is/i,
           'the bid form named a minimum computed from a bids read that returned 500. A bidder ' +
             'who takes it is refused with bid_too_low, and nothing on the form told them the ' +
             'figure was a guess.',
         )
         assert.match(
           s.textOf(form),
-          /could not read the bids/i,
+          /bids came back unreadable/i,
           'the form neither states the floor honestly nor says why it cannot',
         )
       },
@@ -141,8 +141,8 @@ describe('a failed bids read is never rendered as “there are no bids”', () =
       async (s) => {
         assert.match(s.text(), /there is no price to split yet/i)
         assert.match(
-          s.textOf(panelOf(s.byRole('button', 'Bid'))),
-          /smallest bid this auction will take is/i,
+          s.textOf(panelOf(s.byRole('button', 'Place this bid'))),
+          /least you can bid right now is/i,
           'an auction whose bids read fine must still be told what to beat',
         )
       },

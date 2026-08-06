@@ -37,7 +37,7 @@ function CollectionIndex() {
   const collections = useResource(
     load,
     (data) => data.collections.length,
-    'The collections did not load.',
+    'We could not read the collections.',
   )
 
   return (
@@ -46,21 +46,25 @@ function CollectionIndex() {
         <div>
           <h1 className="mk-page__title">Collections</h1>
           <p className="mk-page__lede">
-            A collection groups listings and carries the royalty split its listings inherit.
+            A collection gathers related listings under one shopfront and holds the royalty split
+            that anything added to it picks up by default.
           </p>
         </div>
       </header>
 
-      {collections.state === 'loading' && <Loading label="Loading collections" />}
+      {collections.state === 'loading' && <Loading label="Reading the collections" />}
       {collections.state === 'failed' && collections.error && (
         <Failed
           notice={collections.error}
           onRetry={collections.reload}
-          title="The collections did not load"
+          title="We could not read the collections"
         />
       )}
       {collections.state === 'empty' && (
-        <Empty title="No collections yet" hint="The market answered; nobody has made one." />
+        <Empty
+          title="Nobody has made one"
+          hint="We asked and got a clean answer back — there is not a single collection on this market."
+        />
       )}
       {collections.state === 'ok' && (
         <ul className="mk-grid">
@@ -90,9 +94,9 @@ function CollectionCard({ collection }: { collection: CollectionView }) {
           {/* The shares are of the ROYALTY, not of the price — `market/src/money.ts`. So
               they sum to 100% of the royalty, and saying "of the royalty" is what stops a reader
               adding them to the platform fee. */}
-          Royalty split across {collection.royalties.length}{' '}
-          {collection.royalties.length === 1 ? 'recipient' : 'recipients'}, {formatBps(total)} of the
-          royalty in total
+          The royalty is shared between {collection.royalties.length}{' '}
+          {collection.royalties.length === 1 ? 'person' : 'people'}, accounting for {formatBps(total)}{' '}
+          of it
         </p>
       )}
     </li>
@@ -107,11 +111,11 @@ function CollectionDetail({ id }: { id: string }) {
   const listings = useResource(
     loadListings,
     (data) => data.listings.length,
-    'The listings in this collection did not load.',
+    'We could not read what is in this collection.',
   )
 
   const loadCollection = useCallback((signal: AbortSignal) => listCollections({}, { signal }), [])
-  const collections = useResource(loadCollection, () => 1, 'The collection did not load.')
+  const collections = useResource(loadCollection, () => 1, 'We could not read this collection.')
   const collection = collections.data?.collections.find((entry) => entry.id === id) ?? null
 
   return (
@@ -128,12 +132,12 @@ function CollectionDetail({ id }: { id: string }) {
             // past `state` to `data`. The three cases are now three sentences.
             <p className="mk-page__lede">
               {collections.state === 'loading'
-                ? 'Reading this collection’s details…'
+                ? 'Fetching what this collection is…'
                 : collections.state === 'failed'
                   ? // Degradation with a name on it: we are showing the listings, and we could not
                     // name the collection. Saying so beats a heading that reads as its name.
-                    'We could not read this collection’s own details. Its listings are below.'
-                  : 'No collection on this market has this address. Anything listed against it is below.'}
+                    'We could not read this collection itself, so it goes unnamed here. What is inside it is below.'
+                  : 'No collection on this market answers to that address. Anything listed against it appears below anyway.'}
             </p>
           ) : (
             <p className="mk-page__lede">
@@ -156,7 +160,7 @@ function CollectionDetail({ id }: { id: string }) {
               <tr>
                 <th scope="col">Recipient</th>
                 <th scope="col" className="mk-table__num">
-                  Share of the royalty
+                  Their share of it
                 </th>
               </tr>
             </thead>
@@ -172,19 +176,22 @@ function CollectionDetail({ id }: { id: string }) {
             </tbody>
           </table>
           <p className="mk-note">
-            These are shares OF THE ROYALTY, not of the sale price. The royalty itself is a rate set
-            on each listing, and the shares divide it exactly — largest remainder, so nothing is
-            lost to rounding.
+            What is divided here is the royalty, not the sale price. Each listing sets its own
+            royalty rate, and these shares carve that up to the last unit — the remainder is handed
+            out rather than dropped, so the column always totals the whole of it.
           </p>
         </section>
       )}
 
-      {listings.state === 'loading' && <Loading label="Loading the listings" />}
+      {listings.state === 'loading' && <Loading label="Reading what is inside" />}
       {listings.state === 'failed' && listings.error && (
         <Failed notice={listings.error} onRetry={listings.reload} title="The listings did not load" />
       )}
       {listings.state === 'empty' && (
-        <Empty title="Nothing live in this collection" hint="The market answered; nothing here is on sale." />
+        <Empty
+          title="This collection has nothing on sale"
+          hint="We asked and got a clean answer back — everything in it is either sold, withdrawn, or not yet posted."
+        />
       )}
       {listings.state === 'ok' && (
         <ul className="mk-rows">
@@ -197,13 +204,13 @@ function CollectionDetail({ id }: { id: string }) {
                 </Link>
                 <span>
                   {price === null ? (
-                    <span className="mk-absent">No price</span>
+                    <span className="mk-absent">nothing asked</span>
                   ) : (
                     <Amount value={price} assetCode={listing.assetCode} />
                   )}
                 </span>
                 <Badge tone="neutral" label={ASSET_KIND_COPY[listing.assetKind] ?? listing.assetKind} />
-                <span className="mk-rows__when">{ageLabel(listing.createdAt) ?? 'unknown time'}</span>
+                <span className="mk-rows__when">{ageLabel(listing.createdAt) ?? 'when, we cannot say'}</span>
               </li>
             )
           })}

@@ -75,13 +75,13 @@ export function ListingPage() {
     (signal: AbortSignal) => getListing(id, { signal }),
     [id],
   )
-  const listing = useResource(loadListing, () => 1, 'This listing did not load.')
+  const listing = useResource(loadListing, () => 1, 'We could not read this listing.')
 
   if (!id) {
     return (
       <Failed
-        notice={{ message: 'That address does not name a listing.', requestId: undefined, forbidden: false }}
-        title="No listing in this address"
+        notice={{ message: 'This address does not point at a listing.', requestId: undefined, forbidden: false }}
+        title="Nothing to show for that address"
       />
     )
   }
@@ -100,15 +100,15 @@ export function ListingPage() {
   // which is also the only reading under which "no stale data left rendered as current" (hazard
   // H5) and "the page does not blank" can both hold.
   if (listing.state === 'loading' && listing.data === null) {
-    return <Loading label="Loading the listing" />
+    return <Loading label="Reading the listing" />
   }
   if (listing.state === 'forbidden') return <Forbidden notice={listing.error ?? undefined} />
   if (listing.state === 'failed' || listing.data === null) {
     return (
       <Failed
-        notice={listing.error ?? { message: 'This listing did not load.', requestId: undefined, forbidden: false }}
+        notice={listing.error ?? { message: 'We could not read this listing.', requestId: undefined, forbidden: false }}
         onRetry={listing.reload}
-        title="This listing did not load"
+        title="We could not read this listing"
       />
     )
   }
@@ -123,13 +123,13 @@ function ListingBody({ detail, onChanged }: { detail: ListingDetail; onChanged: 
   const loadRisk = useCallback((signal: AbortSignal) => getListingRisk(listing.id, { signal }), [listing.id])
   // The count is 1 rather than the indicator count: a risk answer with no indicators is a real
   // answer, and reducing it to `empty` would render "nothing here" for a listing that was checked.
-  const risk = useResource(loadRisk, () => 1, 'The chain facts did not load.')
+  const risk = useResource(loadRisk, () => 1, 'We could not read what the chain says about this.')
 
   const loadBids = useCallback((signal: AbortSignal) => listBids(listing.id, { signal }), [listing.id])
-  const bids = useResource(loadBids, () => 1, 'The bids did not load.')
+  const bids = useResource(loadBids, () => 1, 'We could not read the bids.')
 
   const loadOffers = useCallback((signal: AbortSignal) => listOffers(listing.id, { signal }), [listing.id])
-  const offers = useResource(loadOffers, () => 1, 'The offers did not load.')
+  const offers = useResource(loadOffers, () => 1, 'We could not read the offers.')
 
   // `?? []` is the shape `src/lib/resource.ts` warns about — "reporting 'nothing here' for a
   // timeout is how an outage reads as a quiet week" — so the failure travels alongside it. Nothing
@@ -189,7 +189,7 @@ function ListingBody({ detail, onChanged }: { detail: ListingDetail; onChanged: 
           <section className="mk-panel" aria-labelledby="mk-price-title">
             <div className="mk-panel__head">
               <h2 className="mk-panel__title" id="mk-price-title">
-                {listing.pricingMode === 'auction' ? 'The auction' : 'The price'}
+                {listing.pricingMode === 'auction' ? 'The bidding' : 'What it costs'}
               </h2>
               <Badge tone="neutral" label={PRICING_MODE_COPY[listing.pricingMode] ?? listing.pricingMode} />
             </div>
@@ -206,59 +206,58 @@ function ListingBody({ detail, onChanged }: { detail: ListingDetail; onChanged: 
               />
             ) : (
               <dl className="mk-facts">
-                <dt>{listing.pricingMode === 'offers_only' ? 'Asking' : 'Price'}</dt>
+                <dt>{listing.pricingMode === 'offers_only' ? 'Seller hopes for' : 'Asking'}</dt>
                 <dd>
                   <MaybeAmount
                     value={price}
                     assetCode={listing.assetCode}
-                    absent={listing.pricingMode === 'offers_only' ? 'Open to offers' : 'No price set'}
+                    absent={listing.pricingMode === 'offers_only' ? 'Whatever you think it is worth' : 'Nothing asked'}
                   />
                 </dd>
                 <dt>Quantity</dt>
                 <dd className="cf-num">{listing.quantity}</dd>
-                <dt>Settles</dt>
+                <dt>Handed over by</dt>
                 <dd>{SETTLEMENT_MODE_COPY[listing.settlementMode] ?? listing.settlementMode}</dd>
-                <dt>Expires</dt>
-                <dd>{utcDateTime(listing.expiresAt) ?? <span className="mk-absent">No expiry set</span>}</dd>
+                <dt>Comes down</dt>
+                <dd>{utcDateTime(listing.expiresAt) ?? <span className="mk-absent">Not set to come down</span>}</dd>
               </dl>
             )}
           </section>
 
           {preview === null ? (
             <section className="mk-panel">
-              <h2 className="mk-panel__title">Where the money would go</h2>
+              <h2 className="mk-panel__title">How the money would divide</h2>
               {listing.pricingMode === 'auction' && bidsFailed ? (
                 // Not "there is no price to split yet". We did not read the bids, so we do not
                 // know whether there is one — and "once there is a bid" would be this page
                 // asserting the auction is empty on the strength of a request that failed.
                 <p className="mk-panel__body">
-                  We could not read the bids on this listing, so there is no amount here to divide.
-                  There may well be a leading bid; this is a fault in reading them, not a statement
-                  that the auction is empty.
+                  The bids on this listing came back unreadable, so we have no figure to work
+                  from. Somebody may perfectly well be leading it — what failed is our reading of
+                  the bids, not the bidding.
                 </p>
               ) : (
                 <p className="mk-panel__body">
                   There is no price to split yet.{' '}
                   {listing.pricingMode === 'auction'
-                    ? 'Once there is a bid, this shows exactly how that amount divides.'
-                    : 'An offer sets the amount, and the split is taken from that.'}
+                    ? 'The first bid gives us an amount, and this panel then shows exactly where every unit of it lands.'
+                    : 'Whatever an offer names becomes the amount, and the division is taken out of that.'}
                 </p>
               )}
             </section>
           ) : (
             <section className="mk-panel">
-              <h2 className="mk-panel__title">Where the money would go</h2>
+              <h2 className="mk-panel__title">How the money would divide</h2>
               <Breakdown
                 data={preview}
                 caption={
                   listing.pricingMode === 'auction'
-                    ? 'The leading bid, divided as it would settle'
-                    : 'The price, divided as it would settle'
+                    ? 'The bid in front, split the way it would settle'
+                    : 'The asking price, split the way it would settle'
                 }
               />
               <p className="mk-note">
-                The platform fee is fixed on the listing when it is created, not read at
-                settlement, so this rate is the one that will be charged.
+Our share was stamped onto this listing the day it went up rather than looked up when it sells, so the rate you can see here is the rate that will actually be taken.
               </p>
             </section>
           )}
@@ -280,19 +279,18 @@ function ListingBody({ detail, onChanged }: { detail: ListingDetail; onChanged: 
             // `indicatorsAvailable: false`, and is said as one.
             <section className="mk-panel">
               <div className="mk-panel__head">
-                <h2 className="mk-panel__title">What the chain says</h2>
+                <h2 className="mk-panel__title">What the chain shows</h2>
                 <Badge tone="unknown" label="Not loaded" />
               </div>
               <p className="mk-panel__body">
-                We could not fetch the chain facts for this item. The rest of this page is
-                unaffected, and nothing here should be read as a clean bill of health.
+We could not reach the chain to look this item up. Nothing else on the page is affected — but do not read the gap as reassurance, because nothing was checked.
               </p>
               <button type="button" className="cf-btn" onClick={risk.reload}>
                 Try again
               </button>
             </section>
           ) : risk.state === 'loading' ? (
-            <Loading label="Reading the chain" />
+            <Loading label="Looking the item up on chain" />
           ) : (
             <RiskPanel knowledge={riskKnowledge(risk.data)} />
           )}
@@ -382,14 +380,14 @@ function OffersPanel({
       <h2 className="mk-panel__title" id="mk-offers-title">
         Offers
       </h2>
-      {loading && <p className="mk-panel__body">Loading…</p>}
+      {loading && <p className="mk-panel__body">Reading them…</p>}
       {failed && (
         <p className="mk-panel__body">
-          We could not read the offers on this listing. There may be some; we do not know.
+          The offers on this listing came back unreadable. There may be several standing, or none — we cannot tell you which.
         </p>
       )}
       {!loading && !failed && offers.length === 0 && (
-        <p className="mk-panel__body">No standing offers.</p>
+        <p className="mk-panel__body">Nobody has put an offer forward.</p>
       )}
       {offers.length > 0 && (
         <ul className="mk-offers">
@@ -399,7 +397,7 @@ function OffersPanel({
               <li key={offer.id} className="mk-offers__row">
                 <span>
                   {amount === null ? (
-                    <span className="mk-absent">Unreadable amount</span>
+                    <span className="mk-absent">amount we cannot read</span>
                   ) : (
                     <Amount value={amount} assetCode={assetCode} />
                   )}
@@ -437,10 +435,11 @@ function ActionPanel({
   if (listing.frozen) {
     return (
       <section className="mk-panel">
-        <h2 className="mk-panel__title">Buying is paused</h2>
+        <h2 className="mk-panel__title">On hold</h2>
         <p className="mk-panel__body">
-          This listing is under review, so it cannot be bought, bid on, or offered against until
-          the review finishes.
+          Somebody is looking at this listing. While that is under review nothing can be bought,
+          bid or offered against it. It has not been taken down, and it may well come back
+          untouched.
         </p>
       </section>
     )
@@ -448,9 +447,10 @@ function ActionPanel({
   if (listing.status !== 'active') {
     return (
       <section className="mk-panel">
-        <h2 className="mk-panel__title">Not available</h2>
+        <h2 className="mk-panel__title">You cannot act on this one</h2>
         <p className="mk-panel__body">
-          This listing is {LISTING_STATUS_COPY[listing.status]?.toLowerCase() ?? listing.status}.
+          It is {LISTING_STATUS_COPY[listing.status]?.toLowerCase() ?? listing.status}, so there is
+          nothing here left to buy or bid on.
         </p>
       </section>
     )
@@ -497,7 +497,7 @@ function BuyForm({ listing, onChanged }: { listing: ListingView; onChanged: () =
           kind: 'ok',
           message: response.replayed
             ? 'This purchase had already gone through under the same key. Here it is again — you have not been charged twice.'
-            : 'Bought. The order is settled as a single ledger entry.',
+            : 'It is yours. The whole sale posted as one ledger entry.',
           orderId: response.order.id,
           replayed: response.replayed,
         })
@@ -510,21 +510,24 @@ function BuyForm({ listing, onChanged }: { listing: ListingView; onChanged: () =
 
   return (
     <section className="mk-panel mk-panel--action">
-      <h2 className="mk-panel__title">Buy it</h2>
+      <h2 className="mk-panel__title">Take it</h2>
       {price === null ? (
-        <p className="mk-panel__body">This listing has no price, so there is nothing to buy at.</p>
+        <p className="mk-panel__body">
+          No price is set on this listing, so there is no figure to buy it at.
+        </p>
       ) : (
         <>
           <p className="mk-panel__body">
-            You pay <Amount value={price} assetCode={listing.assetCode} />. The fee and the royalty
-            come out of that, not on top of it.
+            It costs you <Amount value={price} assetCode={listing.assetCode} /> and no more. Our
+            share and any royalty are carved out of that figure rather than added to it, and the
+            whole sale posts as one entry.
           </p>
           <button type="button" className="cf-btn cf-btn--ember" disabled={busy} onClick={() => void submit()}>
-            {busy ? 'Buying…' : 'Buy now'}
+            {busy ? 'Going through…' : 'Buy it now'}
           </button>
           <p className="mk-note">
-            Clicking twice is safe: this request carries an idempotency key, so a second attempt
-            returns the first order rather than making a second one.
+            Click as many times as you like. Every attempt is tagged, so the second one hands
+            back the order the first one made instead of buying the thing again.
           </p>
         </>
       )}
@@ -561,12 +564,12 @@ function BidForm({
           kind: 'ok',
           message:
             (response.replayed
-              ? 'This bid had already been placed under the same key. '
-              : 'Bid placed. ') +
-            (response.outbid === null ? '' : 'It displaced the previous leader. ') +
+              ? 'You had already placed this bid, and it still stands. '
+              : 'Your bid is in. ') +
+            (response.outbid === null ? '' : 'You are now in front. ') +
             (response.auctionEndsAt === null
               ? ''
-              : `It landed late enough to extend the auction, which now closes ${utcDateTime(response.auctionEndsAt)}.`),
+              : `It came in late enough to push the clock back, so bidding now runs until ${utcDateTime(response.auctionEndsAt)}.`),
           replayed: response.replayed,
         })
         intent.renew()
@@ -584,7 +587,7 @@ function BidForm({
 
   return (
     <section className="mk-panel mk-panel--action">
-      <h2 className="mk-panel__title">Place a bid</h2>
+      <h2 className="mk-panel__title">Bid on it</h2>
       {bidsFailed ? (
         // The floor is `minimumBid(leader ?? null, startingPrice)`, and we could not read the
         // leader. Stating the starting price as "the smallest bid this auction will take" would
@@ -592,26 +595,27 @@ function BidForm({
         // empty array that a 500 produced. So the starting price is named as what it is, and the
         // unknown is named as an unknown.
         <p className="mk-panel__body">
-          We could not read the bids on this listing, so we cannot tell you the smallest bid it
-          will take. The starting price is{' '}
+          The bids came back unreadable, so we cannot tell you what the smallest acceptable bid
+          is. Bidding opened at{' '}
           <MaybeAmount
             value={parseAmountOrNull(listing.price)}
             assetCode={listing.assetCode}
             absent="not set"
           />
-          ; if somebody is already leading, the floor is one unit above them. Bid what you mean to
-          bid — a bid below the floor is refused and the refusal carries the exact figure.
+          ; if somebody is ahead already, you need one unit more than they put up. Bid the figure
+          you actually mean. Anything too low is turned away, and the refusal tells you precisely
+          what would have been enough.
         </p>
       ) : (
         <p className="mk-panel__body">
-          The smallest bid this auction will take is{' '}
+          The least you can bid right now is{' '}
           <Amount value={floor.minimum} assetCode={listing.assetCode} />
-          {floor.basis === 'above_leader' ? ' — one unit above the leader.' : ' — the starting price.'}
+          {floor.basis === 'above_leader' ? ', one unit past whoever is in front.' : ', which is where the bidding opened.'}
         </p>
       )}
       <div className="mk-form__row">
         <label className="mk-field">
-          <span className="mk-field__label">Your bid, in smallest units of {listing.assetCode}</span>
+          <span className="mk-field__label">What you are bidding, in smallest units of {listing.assetCode}</span>
           <input
             className="cf-input cf-num"
             inputMode="numeric"
@@ -624,7 +628,7 @@ function BidForm({
           />
         </label>
         <button type="button" className="cf-btn cf-btn--ember" disabled={busy || amount === ''} onClick={() => void submit()}>
-          {busy ? 'Bidding…' : 'Bid'}
+          {busy ? 'Placing it…' : 'Place this bid'}
         </button>
       </div>
       <p className="mk-note">{LEADING_BID_CAVEAT}</p>
@@ -652,8 +656,8 @@ function OfferForm({ listing, onChanged }: { listing: ListingView; onChanged: ()
         setResult({
           kind: 'ok',
           message: response.replayed
-            ? 'That offer had already been made under the same key.'
-            : 'Offer made. The seller decides; your funds are reserved until they do or it expires.',
+            ? 'You had already sent this offer, and it is still standing.'
+            : 'Sent. It is the seller\'s call now, and your money stays reserved until they answer or it runs out.',
           replayed: response.replayed,
         })
         intent.renew()
@@ -665,10 +669,10 @@ function OfferForm({ listing, onChanged }: { listing: ListingView; onChanged: ()
 
   return (
     <section className="mk-panel mk-panel--action">
-      <h2 className="mk-panel__title">Make an offer</h2>
+      <h2 className="mk-panel__title">Offer what you think it is worth</h2>
       <div className="mk-form__row">
         <label className="mk-field">
-          <span className="mk-field__label">Your offer, in smallest units of {listing.assetCode}</span>
+          <span className="mk-field__label">What you are offering, in smallest units of {listing.assetCode}</span>
           <input
             className="cf-input cf-num"
             inputMode="numeric"
@@ -677,7 +681,7 @@ function OfferForm({ listing, onChanged }: { listing: ListingView; onChanged: ()
           />
         </label>
         <label className="mk-field">
-          <span className="mk-field__label">Expires (optional)</span>
+          <span className="mk-field__label">Withdraw it automatically at (optional)</span>
           <input
             className="cf-input"
             type="datetime-local"
@@ -686,12 +690,11 @@ function OfferForm({ listing, onChanged }: { listing: ListingView; onChanged: ()
           />
         </label>
         <button type="button" className="cf-btn" disabled={busy || amount === ''} onClick={() => void submit()}>
-          {busy ? 'Offering…' : 'Offer'}
+          {busy ? 'Sending it…' : 'Send this offer'}
         </button>
       </div>
       <p className="mk-note">
-        An offer reserves your funds in Forge Ledger until it is accepted, withdrawn or expires.
-        That reservation is a journal entry, not a balance Forge Market holds.
+Offering puts the money aside in Forge Ledger the moment you send it, and there it stays until the seller takes it, you pull it back, or it runs out of time. Only one offer of yours can stand against a listing at a time. Nothing is transferred to us — the hold is a bookkeeping entry against your own balance.
       </p>
       <ActionOutcome result={result} assetCode={listing.assetCode} />
     </section>
@@ -705,12 +708,12 @@ function ActionOutcome({ result, assetCode }: { result: ActionResult; assetCode?
       <div className="mk-notice mk-notice--ok" role="status">
         <p className="mk-notice__title">
           <span aria-hidden="true">✓ </span>
-          {result.replayed ? 'Already done' : 'Done'}
+          {result.replayed ? 'This had already gone through' : 'That worked'}
         </p>
         <p className="mk-notice__body">{result.message}</p>
         {result.orderId && (
           <Link className="cf-btn" to={orderPath(result.orderId)}>
-            See the order
+            Open the order
           </Link>
         )}
       </div>
@@ -721,18 +724,19 @@ function ActionOutcome({ result, assetCode }: { result: ActionResult; assetCode?
     <div className="mk-notice mk-notice--error" role="alert">
       <p className="mk-notice__title">
         <span aria-hidden="true">■ </span>
-        That did not go through
+        It did not go through
       </p>
       <p className="mk-notice__body">{result.notice.message}</p>
       {minimum !== null && assetCode && (
         <p className="mk-notice__body">
-          The smallest bid that would be accepted is{' '}
+          Bid at least{' '}
           {formatMoney(minimum, assetCode).text} {assetCode}.
         </p>
       )}
       {result.notice.requestId && (
         <p className="mk-notice__meta">
-          Quote this to support: <code className="cf-num mk-reqid">{result.notice.requestId}</code>
+          Give support this reference:{' '}
+          <code className="cf-num mk-reqid">{result.notice.requestId}</code>
         </p>
       )}
     </div>

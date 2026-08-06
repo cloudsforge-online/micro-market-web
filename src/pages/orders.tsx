@@ -46,7 +46,7 @@ export function OrdersPage() {
 function OrderList() {
   const [role, setRole] = useState<'buyer' | 'seller'>('buyer')
   const load = useCallback((signal: AbortSignal) => listOrders({ role }, { signal }), [role])
-  const orders = useResource(load, (data) => data.orders.length, 'Your orders did not load.')
+  const orders = useResource(load, (data) => data.orders.length, 'We could not read your orders.')
 
   return (
     <>
@@ -54,8 +54,10 @@ function OrderList() {
         <div>
           <h1 className="mk-page__title">Orders</h1>
           <p className="mk-page__lede">
-            Each one is a single balanced ledger entry: the payment, the fee, every royalty share
-            and the item are legs of the same entry, which is why they add up exactly.
+            A sale here is one bookkeeping entry rather than a sequence of transfers. The money
+            leaving the buyer, our share, each creator's royalty, what the seller keeps and the
+            item itself all move together or not at all — which is why the figures on an order
+            always reconcile to the penny.
           </p>
         </div>
         <div className="mk-toggle" role="group" aria-label="Which side">
@@ -78,18 +80,18 @@ function OrderList() {
         </div>
       </header>
 
-      {orders.state === 'loading' && <Loading label="Loading your orders" />}
+      {orders.state === 'loading' && <Loading label="Reading your orders" />}
       {orders.state === 'forbidden' && <Forbidden notice={orders.error ?? undefined} />}
       {orders.state === 'failed' && orders.error && (
-        <Failed notice={orders.error} onRetry={orders.reload} title="Your orders did not load" />
+        <Failed notice={orders.error} onRetry={orders.reload} title="We could not read your orders" />
       )}
       {orders.state === 'empty' && (
         <Empty
-          title={role === 'buyer' ? 'You have not bought anything' : 'You have not sold anything'}
-          hint="The market answered; there is nothing on this side yet."
+          title={role === 'buyer' ? 'Nothing bought yet' : 'Nothing sold yet'}
+          hint="We asked and got a clean answer back — this side of your account is empty."
           action={
             <Link className="cf-btn" to="/">
-              Browse the market
+              See what is on sale
             </Link>
           }
         />
@@ -128,18 +130,18 @@ function OrderList() {
 
 function OrderDetail({ id }: { id: string }) {
   const load = useCallback((signal: AbortSignal) => getOrder(id, { signal }), [id])
-  const order = useResource(load, () => 1, 'This order did not load.')
+  const order = useResource(load, () => 1, 'We could not read this order.')
 
-  if (order.state === 'loading') return <Loading label="Loading the order" />
+  if (order.state === 'loading') return <Loading label="Reading the order" />
   if (order.state === 'forbidden') return <Forbidden notice={order.error ?? undefined} />
   if (order.state === 'failed' || order.data === null) {
     return (
       <Failed
         notice={
-          order.error ?? { message: 'This order did not load.', requestId: undefined, forbidden: false }
+          order.error ?? { message: 'We could not read this order.', requestId: undefined, forbidden: false }
         }
         onRetry={order.reload}
-        title="This order did not load"
+        title="We could not read this order"
       />
     )
   }
@@ -174,20 +176,20 @@ function OrderBody({ order }: { order: OrderView }) {
       <div className="mk-columns">
         <div className="mk-columns__main">
           <section className="mk-panel">
-            <h2 className="mk-panel__title">Where the money went</h2>
+            <h2 className="mk-panel__title">How the money divided</h2>
             {breakdown === null ? (
               <p className="mk-panel__body">
-                We could not read the amounts on this order. The rest of the order is below, and the
-                figures themselves are in the ledger entry named here — this is a fault in reading
-                them, not in the sale.
+                The amounts on this order came back in a shape we cannot read. Everything else
+                about it is below, and the real figures are in the ledger entry named further
+                down. The sale itself is fine; our reading of it is not.
               </p>
             ) : (
-              <Breakdown data={breakdown} caption="The sale price, divided as it was posted" />
+              <Breakdown data={breakdown} caption="What it sold for, split the way it was posted" />
             )}
           </section>
 
           <section className="mk-panel">
-            <h2 className="mk-panel__title">The order</h2>
+            <h2 className="mk-panel__title">The particulars</h2>
             <dl className="mk-facts mk-facts--mono">
               <dt>Buyer</dt>
               <dd>{shortSubject(order.buyerSubject)}</dd>
@@ -201,14 +203,14 @@ function OrderBody({ order }: { order: OrderView }) {
                 one order line up with the same field in the next when a reader flips between them.
               */}
               <dd className="cf-num">{order.quantity}</dd>
-              <dt>How it was bought</dt>
+              <dt>Route it took</dt>
               <dd>{order.source}</dd>
               <dt>Ledger entry</dt>
-              <dd>{order.journalEntryId ?? <span className="mk-absent">None — this settled on chain</span>}</dd>
+              <dd>{order.journalEntryId ?? <span className="mk-absent">none, because this one settled on chain</span>}</dd>
               <dt>Chain transaction</dt>
               <dd>
                 {order.outboundTransactionId ?? (
-                  <span className="mk-absent">None — this settled in the ledger</span>
+                  <span className="mk-absent">none, because this one settled in the ledger</span>
                 )}
               </dd>
               <dt>Listing</dt>
@@ -223,16 +225,20 @@ function OrderBody({ order }: { order: OrderView }) {
           <section className="mk-panel">
             <h2 className="mk-panel__title">Payout</h2>
             {order.proceedsState === 'released' ? (
-              <p className="mk-panel__body">The seller's proceeds have been released.</p>
+              <p className="mk-panel__body">
+                The window has closed and the seller has the money to spend.
+              </p>
             ) : payoutDue === null ? (
               <p className="mk-panel__body">
-                The proceeds are held. No payout time is recorded on this order — an on-chain sale
-                has no dispute window, because there is no ledger entry for the platform to reverse.
+                The proceeds are still held, and no release time is written against this order.
+                A sale that settled on chain gets no dispute window, because there is no ledger
+                entry left for anyone here to unwind.
               </p>
             ) : (
               <p className="mk-panel__body">
-                The proceeds are held until <b>{payoutDue}</b>. That window is what a dispute has to
-                land inside to stop the money becoming spendable.
+                The seller's money is set aside until <b>{payoutDue}</b>. A dispute has to be
+                raised before that moment to keep it there; after it, the funds become spendable
+                on their own.
               </p>
             )}
           </section>
@@ -285,18 +291,18 @@ function DisputePanel({ order }: { order: OrderView }) {
       {opened === null ? (
         <>
           <p className="mk-panel__body">
-            If something is wrong with this sale, either side can raise a dispute. Raising one
-            freezes the listing behind it and stops the proceeds being released while it runs.
+            Either party to this sale can flag it if something went wrong. Doing so puts the
+            listing on hold and keeps the seller's money where it is until the matter is settled.
           </p>
           {order.settlementMode === 'onchain' && (
             <p className="mk-note mk-note--strong">
-              This sale settled on chain, so it cannot be refunded through the ledger — you paid the
-              seller's own wallet and there is no entry for us to reverse. A dispute is still worth
-              raising; the remedy is not automatic.
+              This one settled on chain, so no refund can come out of the ledger: the payment
+              went to the seller's own wallet and there is nothing here for us to reverse. Raising
+              it is still worth doing, but do not expect the money back automatically.
             </p>
           )}
           <label className="mk-field">
-            <span className="mk-field__label">What is wrong</span>
+            <span className="mk-field__label">Tell us what went wrong</span>
             <textarea
               className="cf-input mk-area"
               rows={3}
@@ -310,11 +316,11 @@ function DisputePanel({ order }: { order: OrderView }) {
             disabled={busy || reason.trim() === ''}
             onClick={() => void submit()}
           >
-            {busy ? 'Opening…' : 'Raise a dispute'}
+            {busy ? 'Sending…' : 'Flag this sale'}
           </button>
           <p className="mk-note">
-            Pressing this twice is safe. It carries an idempotency key, which is what stops one
-            complaint becoming two disputes and freezing the listing twice.
+            Press it twice by all means. Each attempt is tagged so the second one lands on the
+            first — one complaint, never two, and the listing is put on hold only once.
           </p>
         </>
       ) : (
@@ -329,9 +335,10 @@ function DisputePanel({ order }: { order: OrderView }) {
           </p>
           <p className="mk-notice__body">
             {/* The honest limit, stated rather than papered over. */}
-            We cannot show you its progress here: reading a dispute's state needs an operator, and
-            there is no route on this surface for the people it affects. What you will see is the
-            effect — the proceeds stay held and the listing stays frozen until it is resolved.
+            You will not be able to follow it on this page. Reading the state of a dispute takes
+            operator access, and no route exists here for the people it actually concerns. What
+            you can see is the consequence: the money stays put and the listing stays frozen until
+            somebody closes it.
           </p>
         </div>
       )}
@@ -339,7 +346,7 @@ function DisputePanel({ order }: { order: OrderView }) {
         <div className="mk-notice mk-notice--error" role="alert">
           <p className="mk-notice__title">
             <span aria-hidden="true">■ </span>
-            Not opened
+            Nothing was flagged
           </p>
           <p className="mk-notice__body">{error.message}</p>
           {error.requestId && (

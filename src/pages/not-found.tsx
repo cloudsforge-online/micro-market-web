@@ -15,14 +15,14 @@ export function NotFoundPage() {
       <span className="mk-state__icon" aria-hidden="true">
         ◇
       </span>
-      <p className="mk-state__title">There is no page at this address</p>
+      <p className="mk-state__title">Forge Market has no page at this address</p>
       <p className="mk-state__hint">
-        The link may be out of date, or the page may have moved. This response carries a 404
-        status, so whatever sent you here can be fixed.
+        Either the link has aged out or whatever was here has moved. The server answered with a
+        genuine 404 rather than pretending otherwise, so whoever sent you can find and fix it.
       </p>
       <div className="mk-state__action">
         <Link className="cf-btn" to="/">
-          Back to the listings
+          Take me to what is on sale
         </Link>
       </div>
     </div>
