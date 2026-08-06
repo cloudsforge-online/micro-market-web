@@ -21,34 +21,32 @@
   box-sizing: border-box;
 }
 
-/*
- * `color-scheme` IS NOT DECLARED HERE, and the omission is the point.
- *
- * This rule read `color-scheme: dark` until 1.1, from a time when the design system was dark only.
- * It is now `auto` by default (`data-cf-scheme` in index.html), and `color-scheme` INHERITS — so a
- * declaration on <body> beats the one tokens.css sets on the scheme scope, for every element on
- * the page. A reader on a light operating system would have got a light page with the browser
- * still drawing every native control dark: this surface's Kind and Order selects, the sell page's
- * ten inputs, and the `datetime-local` picker an offer's expiry is chosen in. Those are drawn by
- * the browser from this property alone and no stylesheet reaches inside them.
- *
- * Leaving it off lets the token layer own the scheme, which is what it is for.
- */
 body {
   margin: 0;
   background: var(--cf-bg);
   color: var(--cf-fg);
   font-family: var(--cf-font-sans);
+  /* The bar is dark on every surface; the page follows the substrate. */
+  color-scheme: dark;
 }
 
-/*
- * THE SKIP LINK IS `.cf-skip` NOW, styled in @cloudsforge/ui's ui.css.
- *
- * `.mk-skip` — an absolutely-positioned anchor parked at `left: -9999px` — was deleted with the
- * markup it styled. It was this surface's own copy of a control sixteen other surfaces did not
- * have at all, which is the whole reason `SkipLink` moved into the shared package. A dead rule
- * left behind is worse than either: the next reader edits it and nothing happens.
- */
+/* The skip link is invisible until it has focus, and then it is unmissable. A keyboard reader
+   arriving on a page of fifty cards should not have to tab through all of them. */
+.mk-skip {
+  position: absolute;
+  left: -9999px;
+  z-index: 100;
+  padding: 0.6rem 1rem;
+  background: var(--cf-bg-raised);
+  color: var(--cf-fg);
+  border-radius: 0 0 8px 0;
+}
+
+.mk-skip:focus {
+  left: 0;
+  top: 0;
+  outline: 2px solid var(--cf-accent);
+}
 
 /* ----------------------------- sub-nav ----------------------------- */
 
@@ -471,7 +469,7 @@ body {
 /* Said out loud, not implied: this number is in the asset's smallest units because this bundle
    does not know its decimals. */
 .mk-amount__note {
-  color: var(--cf-warn-text);
+  color: var(--cf-warn, var(--cf-fg-mute));
   font-size: 0.72em;
   white-space: normal;
 }
@@ -563,7 +561,7 @@ body {
 .mk-breakdown__problem {
   margin: 0.6rem 0 0;
   padding: 0.5rem 0.6rem;
-  border: 1px solid var(--cf-danger);
+  border: 1px solid var(--cf-danger, #d2543a);
   border-radius: 8px;
   font-size: 0.85rem;
   color: var(--cf-fg);
@@ -651,12 +649,12 @@ body {
 }
 
 .mk-badge--warn {
-  border-color: var(--cf-warn);
+  border-color: var(--cf-warn, #f4a63c);
   color: var(--cf-fg);
 }
 
 .mk-badge--warn .mk-badge__glyph {
-  color: var(--cf-warn-text);
+  color: var(--cf-warn, #f4a63c);
 }
 
 .mk-badge--unknown {
@@ -701,11 +699,11 @@ body {
 }
 
 .mk-notice--error {
-  border-color: var(--cf-danger);
+  border-color: var(--cf-danger, #d2543a);
 }
 
 .mk-notice--frozen {
-  border-color: var(--cf-warn);
+  border-color: var(--cf-warn, #f4a63c);
   margin: 0 0 1rem;
 }
 
@@ -751,7 +749,7 @@ body {
 }
 
 .mk-indicator.is-present .mk-indicator__glyph {
-  color: var(--cf-warn-text);
+  color: var(--cf-warn, #f4a63c);
 }
 
 .mk-indicator__state {
@@ -818,12 +816,12 @@ body {
 }
 
 .mk-state--failed {
-  border: 1px solid var(--cf-danger);
+  border: 1px solid var(--cf-danger, #d2543a);
 }
 
 .mk-state--failed .mk-state__icon,
 .mk-state--forbidden .mk-state__icon {
-  color: var(--cf-danger);
+  color: var(--cf-danger, #d2543a);
 }
 
 .mk-state--forbidden {
@@ -895,7 +893,7 @@ body {
   border-radius: 6px;
   /* A dark surface behind a transparent PNG, so the letterboxing is part of the frame rather than
    * a white rectangle that looks like a rendering fault. */
-  background: var(--cf-bg-raised);
+  background: var(--cf-bg-raise, #000);
 }
 
 .mk-gallery-edit {
@@ -930,7 +928,7 @@ body {
   object-fit: contain;
   border: 1px solid var(--cf-line);
   border-radius: 4px;
-  background: var(--cf-bg-raised);
+  background: var(--cf-bg-raise, #000);
 }
 
 /* The image exists and its address does not — see `components/gallery.tsx`. A placeholder rather
