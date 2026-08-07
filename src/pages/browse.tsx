@@ -125,8 +125,8 @@ export function BrowsePage() {
           title="The market is empty at the moment"
           hint={
             assetKind === ''
-              ? 'We asked and got a clean answer back: nobody has anything up for sale.'
-              : `We asked and got a clean answer back: nothing on sale right now is a ${ASSET_KIND_COPY[assetKind] ?? assetKind}.`
+              ? 'Nothing failed to load. There is genuinely nobody selling anything right now.'
+              : `Nothing failed to load. Nothing on sale right now is a ${ASSET_KIND_COPY[assetKind] ?? assetKind}.`
           }
           action={
             <Link className="cf-btn" to="/sell">

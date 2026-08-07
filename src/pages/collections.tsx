@@ -63,7 +63,7 @@ function CollectionIndex() {
       {collections.state === 'empty' && (
         <Empty
           title="Nobody has made one"
-          hint="We asked and got a clean answer back — there is not a single collection on this market."
+          hint="Nothing failed to load. There is not a single collection on this market yet."
         />
       )}
       {collections.state === 'ok' && (
@@ -190,7 +190,7 @@ function CollectionDetail({ id }: { id: string }) {
       {listings.state === 'empty' && (
         <Empty
           title="This collection has nothing on sale"
-          hint="We asked and got a clean answer back — everything in it is either sold, withdrawn, or not yet posted."
+          hint="Nothing failed to load. Everything in it is either sold, withdrawn, or not yet posted."
         />
       )}
       {listings.state === 'ok' && (

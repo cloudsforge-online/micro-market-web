@@ -88,7 +88,7 @@ function OrderList() {
       {orders.state === 'empty' && (
         <Empty
           title={role === 'buyer' ? 'Nothing bought yet' : 'Nothing sold yet'}
-          hint="We asked and got a clean answer back — this side of your account is empty."
+          hint="Nothing failed to load. This side of your account is genuinely empty."
           action={
             <Link className="cf-btn" to="/">
               See what is on sale
