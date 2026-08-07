@@ -117,7 +117,7 @@ export function GalleryEditor({
   const config = useResource(
     (signal) => getImageConfig({ signal }),
     () => 1,
-    'We could not check whether images are available.',
+    'We could not find out whether photographs can be uploaded.',
   )
   const [error, setError] = useState<ErrorNotice | null>(null)
   const [note, setNote] = useState<string | null>(null)
@@ -148,7 +148,7 @@ export function GalleryEditor({
         intent.renew()
         setNote(
           uploaded.metadataStrippedBytes > 0
-            ? 'Added. Location and camera information was removed from the file before it was stored.'
+            ? 'Added. Where the photograph was taken, and on what, was stripped out before it was stored.'
             : 'Added.',
         )
         onChanged()
@@ -159,7 +159,7 @@ export function GalleryEditor({
         setError(
           refusal
             ? { message: refusal, requestId: undefined, forbidden: false }
-            : noticeFor(err, 'That image was not added.'),
+            : noticeFor(err, 'That photograph was not added.'),
         )
       } finally {
         // So choosing the SAME file again fires `change`. Without this, a user whose first attempt
@@ -178,7 +178,7 @@ export function GalleryEditor({
         intent.renew()
         onChanged()
       } catch (err) {
-        setError(noticeFor(err, 'That image was not removed.'))
+        setError(noticeFor(err, 'That photograph was not removed.'))
       }
     })
 
@@ -205,18 +205,23 @@ export function GalleryEditor({
         intent.renew()
         onChanged()
       } catch (err) {
-        setError(noticeFor(err, 'The order was not changed.'))
+        setError(noticeFor(err, 'They were not reordered.'))
       }
     })
 
   return (
     <div className="mk-gallery-edit">
       <h3 className="mk-gallery-edit__title">Photographs</h3>
+      <p className="mk-note">
+        Up to ten per listing, in PNG, JPEG or WebP, and 8 MB apiece. Location and camera details
+        are stripped out before anything is stored. The first one is what buyers see on the grid,
+        and you can reorder them at any point while the listing is yours to change.
+      </p>
 
       {config.state === 'failed' && (
         <p className="mk-note mk-note--strong">
-          We could not check whether images are available right now. Nothing already on this listing
-          has changed.
+          We could not find out whether photographs can be uploaded just now. Whatever is already
+          attached to this listing is untouched.
         </p>
       )}
 
@@ -224,8 +229,8 @@ export function GalleryEditor({
         // Said once, plainly, instead of a control that fails on click. `uploadUrl` is null when
         // `STUDIO_PUBLIC_URL` is unset on the service, which is every deployment today.
         <p className="mk-note mk-note--strong">
-          Image uploads are not available on this deployment yet. Everything else about this listing
-          works as normal.
+          Photographs cannot be uploaded on this deployment. Everything else about the listing
+          behaves normally.
         </p>
       )}
 

@@ -65,7 +65,7 @@ export function SellPage() {
     [subject],
   )
   // `[subject]`: it is null until `GET /auth/me` answers, which is always after mount.
-  const drafts = useResource(load, (data) => data.listings.length, 'Your drafts did not load.', [
+  const drafts = useResource(load, (data) => data.listings.length, 'We could not read what you have waiting.', [
     subject,
   ])
 
@@ -76,7 +76,7 @@ export function SellPage() {
     },
     [subject],
   )
-  const live = useResource(loadLive, (data) => data.listings.length, 'Your listings did not load.', [
+  const live = useResource(loadLive, (data) => data.listings.length, 'We could not read what you have on sale.', [
     subject,
   ])
 
@@ -86,8 +86,10 @@ export function SellPage() {
         <div>
           <h1 className="mk-page__title">Sell</h1>
           <p className="mk-page__lede">
-            The platform takes its cut out of the sale price, never on top of it, and the seller's
-            share is whatever is left after the fee and the royalty. See <Link to="/fees">Fees</Link>.
+            Post an item at a set price, open it to bidding, or invite offers and pick the one you
+            like. Our share is carved out of what it sells for rather than added to it, and you
+            keep everything left once that and any royalty are taken. The{' '}
+            <Link to="/fees">figures are here</Link>.
           </p>
         </div>
       </header>
@@ -100,16 +102,23 @@ export function SellPage() {
       />
 
       <section className="mk-panel">
-        <h2 className="mk-panel__title">Your drafts</h2>
+        <h2 className="mk-panel__title">Waiting to go up</h2>
         <p className="mk-panel__body">
-          A draft is not on the market. It goes live when you activate it — and for an on-chain
-          listing, only after the escrow transaction is confirmed.
+          Nobody can see a draft but you, and nothing about it is committed. It reaches the market
+          when you activate it, at which point the item is locked away so it cannot be sold twice.
+          If you chose to settle on chain, activation waits until we can see your escrow
+          transaction confirmed.
         </p>
-        {drafts.state === 'loading' && <Loading label="Loading your drafts" />}
+        {drafts.state === 'loading' && <Loading label="Reading what you have waiting" />}
         {drafts.state === 'failed' && drafts.error && (
-          <Failed notice={drafts.error} onRetry={drafts.reload} title="Your drafts did not load" />
+          <Failed notice={drafts.error} onRetry={drafts.reload} title="We could not read your drafts" />
         )}
-        {drafts.state === 'empty' && <Empty title="No drafts" hint="Everything you have listed is live or finished." />}
+        {drafts.state === 'empty' && (
+          <Empty
+            title="Nothing waiting"
+            hint="Everything you have posted is either on the market or already done with."
+          />
+        )}
         {drafts.state === 'ok' &&
           (drafts.data?.listings ?? []).map((listing) => (
             <DraftRow
@@ -125,12 +134,17 @@ export function SellPage() {
       </section>
 
       <section className="mk-panel">
-        <h2 className="mk-panel__title">Your live listings</h2>
-        {live.state === 'loading' && <Loading label="Loading your listings" />}
+        <h2 className="mk-panel__title">On the market now</h2>
+        {live.state === 'loading' && <Loading label="Reading what you have on sale" />}
         {live.state === 'failed' && live.error && (
-          <Failed notice={live.error} onRetry={live.reload} title="Your listings did not load" />
+          <Failed notice={live.error} onRetry={live.reload} title="We could not read your listings" />
         )}
-        {live.state === 'empty' && <Empty title="Nothing live" hint="Nothing of yours is on the market right now." />}
+        {live.state === 'empty' && (
+          <Empty
+            title="You have nothing on sale"
+            hint="Fill in the form above and it will show up here once you activate it."
+          />
+        )}
         {live.state === 'ok' && (
           <ul className="mk-rows">
             {(live.data?.listings ?? []).map((listing) => (
@@ -196,7 +210,7 @@ function DraftRow({
       {onchain && (
         <div className="mk-form__row">
           <label className="mk-field">
-            <span className="mk-field__label">Escrow transaction</span>
+            <span className="mk-field__label">Hash of the escrow transaction</span>
             <input
               className="cf-input cf-num"
               value={tx}
@@ -272,7 +286,8 @@ function LiveRow({ listing, onChanged }: { listing: ListingView; onChanged: () =
         // the control is not offered. A button that can only fail is a button that teaches a seller
         // the app is broken during the one moment they are already worried.
         <p className="mk-note">
-          Photographs cannot be changed while this listing is under review.
+          While this listing is under review its photographs are locked. You will get them back
+          when the review closes.
         </p>
       ) : (
         <GalleryEditor
@@ -303,7 +318,7 @@ function ActivationNotice({ diagnosis }: { diagnosis: ActivationDiagnosis }) {
     >
       <p className="mk-notice__title">
         <span aria-hidden="true">{unknown ? '? ' : '■ '}</span>
-        {unknown ? 'We could not confirm it' : 'It was not activated'}
+        {unknown ? 'We could not confirm it' : 'It did not go up'}
       </p>
       <p className="mk-notice__body">{diagnosis.message}</p>
       {diagnosis.requestId && (
@@ -394,10 +409,10 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
 
   return (
     <section className="mk-panel mk-panel--action">
-      <h2 className="mk-panel__title">List something</h2>
+      <h2 className="mk-panel__title">Put something up for sale</h2>
       <div className="mk-form">
         <label className="mk-field">
-          <span className="mk-field__label">Item URN</span>
+          <span className="mk-field__label">Item URN — the address this item answers to</span>
           <input
             className="cf-input cf-num"
             value={itemUrn}
@@ -406,7 +421,7 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
           />
         </label>
         <label className="mk-field">
-          <span className="mk-field__label">Kind</span>
+          <span className="mk-field__label">What sort of thing it is</span>
           <select className="cf-input" value={assetKind} onChange={(e) => setAssetKind(e.target.value as AssetKind)}>
             {ASSET_KINDS.map((kind) => (
               <option key={kind} value={kind}>
@@ -416,7 +431,7 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
           </select>
         </label>
         <label className="mk-field">
-          <span className="mk-field__label">How it sells</span>
+          <span className="mk-field__label">How you want it sold</span>
           <select
             className="cf-input"
             value={pricingMode}
@@ -430,7 +445,7 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
           </select>
         </label>
         <label className="mk-field">
-          <span className="mk-field__label">Where it settles</span>
+          <span className="mk-field__label">How the handover happens</span>
           <select
             className="cf-input"
             value={settlementMode}
@@ -442,10 +457,17 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
               </option>
             ))}
           </select>
+          <span className="mk-field__help">
+            Settle through the ledger and the item changes hands the instant it sells, in one
+            balanced entry. Settle on chain and it is escrowed on the CloudsForge chain instead —
+            a full EVM, so Solidity compiles and deploys against it and Hardhat and Foundry work
+            unmodified. That route cannot be reversed by us afterwards.
+          </span>
         </label>
         <label className="mk-field">
           <span className="mk-field__label">
-            {pricingMode === 'auction' ? 'Starting price' : 'Price'}, in smallest units
+            {pricingMode === 'auction' ? 'Bidding opens at this price' : 'Asking price'}, in
+            smallest units
           </span>
           <input
             className="cf-input cf-num"
@@ -456,11 +478,11 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
           />
         </label>
         <label className="mk-field">
-          <span className="mk-field__label">Priced in</span>
+          <span className="mk-field__label">Which asset buyers pay in</span>
           <input className="cf-input" value={assetCode} onChange={(e) => setAssetCode(e.target.value)} />
         </label>
         <label className="mk-field">
-          <span className="mk-field__label">The item's own asset code</span>
+          <span className="mk-field__label">Asset code the item itself carries</span>
           <input className="cf-input" value={itemAssetCode} onChange={(e) => setItemAssetCode(e.target.value)} />
         </label>
         <label className="mk-field">
@@ -473,7 +495,7 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
           />
         </label>
         <label className="mk-field">
-          <span className="mk-field__label">Royalty, in basis points</span>
+          <span className="mk-field__label">Royalty to the creator, in basis points</span>
           <input
             className="cf-input cf-num"
             inputMode="numeric"
@@ -483,7 +505,7 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
         </label>
         {bps > 0 && (
           <label className="mk-field">
-            <span className="mk-field__label">Royalty goes to</span>
+            <span className="mk-field__label">Whose account the royalty lands in</span>
             <input
               className="cf-input cf-num"
               value={royaltySubject}
@@ -496,17 +518,19 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
 
       {!royaltyOk && (
         <p className="mk-note mk-note--strong">
-          A royalty is a whole number of basis points between 0 and 10000. 250 is 2.5%.
+          A royalty is a whole number of basis points. 250 means 2.5%, 1000 means 10%, and 10%
+          is as high as this market will take.
         </p>
       )}
 
       {preview && (
         <>
-          <Breakdown data={preview} caption="Your royalty, at this price" />
+          <Breakdown data={preview} caption="How the royalty divides at this price" />
           <p className="mk-note">
-            The platform's cut is not shown above because it is not yours to choose: the service
-            snapshots its own rate onto the listing when it is created. It comes out of the sale
-            price, not on top of it, so the price a buyer pays is the price you set.
+            Our own share is missing from that table on purpose: it is not a number you get to
+            pick, and it is stamped onto the listing at the moment it is created. It comes out of
+            the sale rather than being added to it, so a buyer pays exactly the figure you asked
+            for.
           </p>
         </>
       )}
@@ -517,19 +541,19 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
         disabled={busy || itemUrn.trim() === '' || !royaltyOk}
         onClick={() => void submit()}
       >
-        {busy ? 'Creating…' : 'Create the listing'}
+        {busy ? 'Saving…' : 'Save this as a draft'}
       </button>
 
       {created && (
         <div className="mk-notice mk-notice--ok" role="status">
           <p className="mk-notice__title">
             <span aria-hidden="true">✓ </span>
-            Created as a draft
+            Saved as a draft
           </p>
           <p className="mk-notice__body">
-            It is not on the market yet. Activate it below.{' '}
+            Nobody can see it yet. Activate it below when you are ready.{' '}
             {created.degraded &&
-              'Our policy check could not be reached when this was created, so it has been opened for human review. It is still yours to activate — a policy outage does not close the market.'}
+              'We could not reach our content checks while saving this, so a person will look at it. That changes nothing you can do — activate it whenever you like. An outage on our side does not shut the market.'}
           </p>
           <Link className="cf-btn" to={listingPath(created.id)}>
             See it
@@ -540,7 +564,7 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
         <div className="mk-notice mk-notice--error" role="alert">
           <p className="mk-notice__title">
             <span aria-hidden="true">■ </span>
-            Not created
+            Not saved
           </p>
           <p className="mk-notice__body">{error.message}</p>
           {error.requestId && (
@@ -551,9 +575,9 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
         </div>
       )}
       <p className="mk-note">
-        Every field above is one the service actually reads. Two it does not — the platform fee and
-        the dispute window — are set from its own configuration when the listing is created
-        (server.ts), which is why there is nowhere here to type them.
+        Every box above changes something. Two figures that matter are missing on purpose, because
+        they are not the seller's to set: our share, and how long a buyer has to raise a dispute
+        before your money is released. Both are fixed onto the listing the moment you save it.
       </p>
     </section>
   )

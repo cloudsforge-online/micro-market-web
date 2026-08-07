@@ -42,7 +42,7 @@ export function BrowsePage() {
   // `[assetKind]`: it is the one filter the ROUTE reads, so changing it is a new request rather
   // than a new view of the same one. The text filter and the sort are not here on purpose —
   // both are applied in this bundle to what the request returned, and `searchScopeNote` says so.
-  const resource = useResource(load, (data) => data.listings.length, 'The listings did not load.', [
+  const resource = useResource(load, (data) => data.listings.length, 'We could not fetch what is on sale.', [
     assetKind,
   ])
   const all = resource.data?.listings ?? []
@@ -57,8 +57,10 @@ export function BrowsePage() {
         <div>
           <h1 className="mk-page__title">Browse the market</h1>
           <p className="mk-page__lede">
-            Every price is shown in the asset it settles in. Nothing here is converted, because a
-            converted price is a price at a rate somebody else chose.
+            Game items, tokens, entitlements, memberships, brand assets and collectibles — sold at
+            a set price, by auction, or for whatever somebody is willing to put forward. Each one
+            is priced in the asset it will settle in, and we convert nothing: a converted price is
+            a price at a rate that somebody else picked for you.
           </p>
         </div>
         <Link className="cf-btn" to="/sell">
@@ -68,17 +70,17 @@ export function BrowsePage() {
 
       <form className="mk-filters" role="search" onSubmit={(event) => event.preventDefault()}>
         <label className="mk-field">
-          <span className="mk-field__label">Filter these listings</span>
+          <span className="mk-field__label">Narrow what is below</span>
           <input
             className="cf-input"
             type="search"
             value={query}
-            placeholder="An item URN, an asset code…"
+            placeholder="An item address, an asset code…"
             onChange={(event) => setQuery(event.target.value)}
           />
         </label>
         <label className="mk-field">
-          <span className="mk-field__label">Kind</span>
+          <span className="mk-field__label">Type of thing</span>
           <select
             className="cf-input"
             value={assetKind}
@@ -93,7 +95,7 @@ export function BrowsePage() {
           </select>
         </label>
         <label className="mk-field">
-          <span className="mk-field__label">Order</span>
+          <span className="mk-field__label">Show me in this order</span>
           <select
             className="cf-input"
             value={sort}
@@ -108,22 +110,22 @@ export function BrowsePage() {
         </label>
       </form>
 
-      {resource.state === 'loading' && <Loading label="Loading listings" />}
+      {resource.state === 'loading' && <Loading label="Fetching what is on sale" />}
       {resource.state === 'forbidden' && <Forbidden notice={resource.error ?? undefined} />}
       {resource.state === 'failed' && resource.error && (
         <Failed notice={resource.error} onRetry={resource.reload} title="The listings did not load" />
       )}
       {resource.state === 'empty' && (
         <Empty
-          title="Nothing is listed here right now"
+          title="The market is empty at the moment"
           hint={
             assetKind === ''
-              ? 'The market answered, and there are no live listings.'
-              : `The market answered, and nothing live is a ${ASSET_KIND_COPY[assetKind] ?? assetKind}.`
+              ? 'We asked and got a clean answer back: nobody has anything up for sale.'
+              : `We asked and got a clean answer back: nothing on sale right now is a ${ASSET_KIND_COPY[assetKind] ?? assetKind}.`
           }
           action={
             <Link className="cf-btn" to="/sell">
-              List the first one
+              Be the first
             </Link>
           }
         />
@@ -136,11 +138,11 @@ export function BrowsePage() {
           </p>
           {visible.length === 0 ? (
             <Empty
-              title="Nothing on this page matches"
-              hint="The filter runs over the listings above, not over the whole market. Clearing it brings them back."
+              title="Nothing here answers to that"
+              hint="What you typed is matched against the listings that were fetched, not against every listing in existence. Empty the box and they all come back."
               action={
                 <button type="button" className="cf-btn" onClick={() => setQuery('')}>
-                  Clear the filter
+                  Empty the box
                 </button>
               }
             />
@@ -181,14 +183,14 @@ function ListingCard({ listing }: { listing: ListingView }) {
           {listing.pricingMode === 'auction'
             ? price === null
               ? LEADING_BID_LABEL
-              : 'Starting price'
+              : 'Bidding opens at'
             : listing.pricingMode === 'offers_only'
-              ? 'Open to offers'
-              : 'Price'}
+              ? 'Offers wanted'
+              : 'Asking'}
         </span>
         {price === null ? (
           <span className="mk-absent">
-            {listing.pricingMode === 'offers_only' ? 'Name your price' : 'No price set'}
+            {listing.pricingMode === 'offers_only' ? 'Tell them what it is worth to you' : 'Nothing asked'}
           </span>
         ) : (
           <Amount value={price} assetCode={listing.assetCode} />
@@ -204,19 +206,19 @@ function ListingCard({ listing }: { listing: ListingView }) {
       </div>
       {clock.phase === 'open' && clock.remaining !== null && (
         <p className="mk-card__clock">
-          Closes in <b>{clock.remaining}</b> — {utcDateTime(clock.endsAt)}. A late bid extends it.
+Closes in <b>{clock.remaining}</b>, at {utcDateTime(clock.endsAt)}. Bid near the end and the clock is pushed back.
         </p>
       )}
       {clock.phase === 'closing' && (
-        <p className="mk-card__clock">Bidding time has run out; the close is being settled.</p>
+        <p className="mk-card__clock">The clock has run down. The close is being worked out now.</p>
       )}
       {clock.phase === 'no_close_time' && (
-        <p className="mk-card__clock">No close time recorded for this auction.</p>
+        <p className="mk-card__clock">This auction carries no closing time that we can read.</p>
       )}
       {/* Every figure carries its observation time. A listing with an unreadable `createdAt` says
           so rather than borrowing the reader's clock. */}
       <p className="mk-card__stamp">
-        {listed === null ? 'Listed at an unknown time' : `Listed ${listed}`}
+        {listed === null ? 'We cannot read when this went up' : `Put up ${listed}`}
       </p>
     </li>
   )

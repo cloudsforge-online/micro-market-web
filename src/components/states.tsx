@@ -60,7 +60,7 @@ export function Empty({
 export function Failed({
   notice,
   onRetry,
-  title = 'That did not load',
+  title = 'This did not load',
 }: {
   notice: ErrorNotice
   onRetry?: (() => void) | undefined
@@ -99,7 +99,7 @@ export function Failed({
  */
 export function Forbidden({
   notice,
-  title = 'You do not have access to this',
+  title = 'This is not open to your account',
 }: {
   notice?: ErrorNotice | undefined
   title?: string | undefined
@@ -111,8 +111,8 @@ export function Forbidden({
       </span>
       <p className="mk-state__title">{title}</p>
       <p className="mk-state__hint">
-        {notice?.message ?? 'Your account is missing the role this page needs.'} Ask an
-        administrator to grant it.
+        {notice?.message ?? 'Your account does not carry the permission this page needs.'} Whoever
+        administers it can add that for you.
       </p>
       {notice?.requestId && (
         <p className="mk-state__meta">
