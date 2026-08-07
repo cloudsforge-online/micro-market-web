@@ -150,11 +150,23 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
+/**
+ * The panel a reader sees for the moment a gated route is deciding whether to let them in.
+ *
+ * `mk-`, NOT `wt-`. This markup arrived from `web-template`, kept that template's class prefix,
+ * and `src/styles.css` has never defined a single `wt-` rule — so both gates rendered completely
+ * unstyled: no padding, no centring, and a `<span>` where the spinner should be, which is an
+ * empty inline box a reader cannot see at all. It looked like a blank page with one line of text
+ * on it, which is exactly what "Checking your session" must not look like.
+ *
+ * The class names are the ones `components/states.tsx` uses for the same three elements, so the
+ * two loading panels in this app are now one design rather than one design and one accident.
+ */
 function LoadingGate({ label }: { label: string }) {
   return (
-    <div className="wt-state wt-state--loading" role="status">
-      <span className="wt-spinner" aria-hidden="true" />
-      <p className="wt-state__title">{label}</p>
+    <div className="mk-state mk-state--loading" role="status">
+      <span className="mk-spinner" aria-hidden="true" />
+      <p className="mk-state__title">{label}</p>
     </div>
   )
 }

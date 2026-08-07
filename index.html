@@ -9,18 +9,59 @@
   whose --cf-ash-900 is the near-black warm ground the market brand assets were drawn against
   (brand/MANIFEST.json names it #12100f). The ground is a TOKEN, never a hex written here: a
   literal would stop following the substrate the day the substrate moves.
+
+  data-cf-scheme is the third of the three, added with @cloudsforge/ui 1.1. `auto` follows the
+  reader's operating system; `light` and `dark` force one. It is set here, statically, for the same
+  reason the other two are — a page that paints before the attribute lands flashes the default and
+  then changes colour, and a theme flash is worse than a theme nobody asked for.
+
+  This surface never carried a light mode of its own. It gets one now without a line of local CSS,
+  because the scheme lives in the token layer where every surface can have it and where the
+  contrast of each pair is measured on both schemes rather than on the one this repository happened
+  to check.
 -->
-<html lang="en-GB" data-cf-product="market" data-cf-substrate="warm">
+<html lang="en-GB" data-cf-product="market" data-cf-substrate="warm" data-cf-scheme="auto">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="colour-scheme" content="dark light" />
+    <!--
+      `color-scheme`, with the American spelling the HTML standard defines. This file spelled it
+      `colour-scheme` until 1.1, which is not a meta name any browser knows, so the tag was inert:
+      form controls and scrollbars were drawn in the browser's default scheme regardless of what it
+      said. The estate's prose is British and stays British; a standard's identifier is not prose.
+
+      Both schemes are declared, and the token layer is what actually switches them: this tells the
+      browser which form controls and scrollbars to draw, and `data-cf-scheme` on <html> tells
+      @cloudsforge/ui which palette to resolve.
+    -->
+    <meta name="color-scheme" content="dark light" />
     <!--
       The build that produced this bundle. Stamped by the Dockerfile, read by src/lib/obs.ts, and
       the reason an error report can be pinned to the deploy that introduced it. It is an identity
       rather than a configuration: it names the artefact, it does not tell it where it is running.
     -->
     <meta name="cf-release" content="dev" />
+    <!--
+      THE GOOGLE ANALYTICS MEASUREMENT ID, AND NOT THE GOOGLE ANALYTICS TAG.
+      ────────────────────────────────────────────────────────────────────────────────────────
+      There is deliberately no Google Tag `<script src="…">` anywhere in this file, and there must
+      never be one — which is also why the tag's own hostname is not written out here, so that a
+      grep for it over this file answers zero rather than answering with this paragraph. The stock
+      snippet fetches a third-party script and sets `_ga` on load — before any banner has been
+      drawn, let alone answered — and under ePrivacy
+      Art. 5(3) an analytics cookie set before consent is a violation that a banner underneath it
+      does not cure. `@cloudsforge/ui/consent` injects the tag from exactly one place: the Accept
+      button. See the header of that module for the whole argument.
+
+      It is a meta tag rather than a build-time environment variable because
+      test/no-build-time-config.test.ts greps for those and fails the build — an artefact with an
+      environment frozen into it is not the artefact that passed CI. (That test greps this file
+      too, which is why the prefix is not spelled out here.) This is the same mechanism
+      `cf-release` above already uses, and the ID is an identity rather than a configuration: it
+      names the property, it does not tell the bundle where it is running. An absent or empty
+      value means analytics is simply off, which is what a local `pnpm dev` gets.
+    -->
+    <meta name="cf-analytics" content="G-NB8DNLTKZQ" />
     <!--
       Forge Market's own chrome, from micro-brand's `assets/market/`. Four frontends shipped with
       the browser's blank-page glyph in the tab and a bare URL wherever they were shared, because
