@@ -55,7 +55,12 @@ export function BrowsePage() {
     <>
       <header className="mk-page__head">
         <div>
-          <h1 className="mk-page__title">Browse the market</h1>
+          {/*
+            Not "Browse the market", which described the button the reader had already pressed.
+            This is the front door, so the heading carries the one thing that separates buying
+            here from buying from a stranger — the same claim the surface registry makes.
+          */}
+          <h1 className="mk-page__title">Buy and sell, with the money held until the buyer has the goods</h1>
           <p className="mk-page__lede">
             Game items, tokens, entitlements, memberships, brand assets and collectibles — sold at
             a set price, by auction, or for whatever somebody is willing to put forward. Each one
