@@ -20,6 +20,7 @@
  * they find out about afterwards.
  */
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { ScrollToTop } from './components/scroll-to-top.tsx'
 import { AppShell } from './components/shell.tsx'
 import { AuthProvider, ProtectedRoute } from './lib/auth.tsx'
 import { BrowsePage } from './pages/browse.tsx'
@@ -33,6 +34,7 @@ import { SellPage } from './pages/sell.tsx'
 export function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <AuthProvider>
         <Routes>
           <Route element={<AppShell />}>
