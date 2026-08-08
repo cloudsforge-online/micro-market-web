@@ -285,6 +285,37 @@ jobs:
           [ "$hits" = "0" ] || exit 1
           echo "ok: no float arithmetic near an amount"
 
+      - name: No asset code is a default on any page
+        # `src/pages/sell.tsx` opened every create-listing form with `useState` on the retired
+        # SHARD, for the price asset and the item asset, and rendered both as the visible value of
+        # a text input — so a seller who did not edit the field got a listing denominated in an
+        # asset nothing may newly be denominated in (`RETIRED_ASSETS`,
+        # `contracts/packages/chain/src/index.ts`; micro-org #227 §2). It was the THIRD retired
+        # reference to reach a user surface, after #15 and #182.
+        #
+        # `test/sell-form.test.ts` owns this rule and states the argument. It is repeated here for
+        # the reason every rule in this job is: a test that can be deleted along with the line it
+        # forbids is not a gate. The check is the SHAPE of the mistake, not the name of one asset —
+        # grepping for SHARD would go green the moment somebody typed EMBER in its place, and would
+        # say nothing at all the day EMBER is wound down.
+        #
+        # COMMENTS ARE STRIPPED FIRST, same as the float check above and for the same reason: the
+        # page's own header explains this rule and quotes the line it forbids while doing so.
+        run: |
+          set -uo pipefail
+          pages=$(find src/pages -name '*.tsx' -o -name '*.ts')
+          [ -n "$pages" ] || { echo "::error::no pages found; this step is reading nothing"; exit 1; }
+          hits=0
+          for file in $pages; do
+            stripped=$(sed -e 's|//.*$||' -e 's|^[[:space:]]*\*.*$||' -e 's|/\*.*\*/||' "$file")
+            if printf '%s\n' "$stripped" | grep -nE "useState[^(]*\([[:space:]]*'[A-Z][A-Z0-9:._-]+'"; then
+              echo "::error file=${file}::a page opens a field pre-filled with something shaped like an asset code; see UNCHOSEN_ASSET_CODE in src/lib/market.ts"
+              hits=1
+            fi
+          done
+          [ "$hits" = "0" ] || exit 1
+          echo "ok: no page pre-fills an asset code"
+
       - name: An unknown escrow is never rendered as an unconfirmed one
         # The defect this repository was briefed on. `escrowIsUnknown` and `escrowIsUnconfirmed`
         # are separate booleans so that a careless `!confirmed` cannot collapse them, and the test

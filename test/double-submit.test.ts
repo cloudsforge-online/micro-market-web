@@ -641,12 +641,24 @@ const DISPUTE = {
   openedAt: '2026-07-05T09:00:00.000Z',
 }
 
-/** Fill the create-listing form with a valid draft. */
+/**
+ * Fill the create-listing form with a valid draft.
+ *
+ * The two asset codes are typed HERE rather than being left to a default, because the form has
+ * none: it opens both blank on purpose and `Save this as a draft` stays disabled until a seller
+ * fills them in (`UNCHOSEN_ASSET_CODE`, `src/lib/market.ts`; `test/sell-form.test.ts` owns that
+ * rule). Without these two lines every double-submit scenario below would click a disabled button,
+ * send nothing, and pass by asserting that one request is not two.
+ */
 async function fillSellForm(s: Screen): Promise<void> {
   const urn = labelled(s, /urn/i) ?? s.allByRole('textbox')[0]
   if (urn) await s.type(urn, 'urn:cf:token:hearth:testnet:0xfeedface')
-  const price = labelled(s, /asking price|bidding opens|price/i)
+  const price = labelled(s, /asking price|bidding opens/i)
   if (price) await s.type(price, '2500000000000000000')
   const quantity = labelled(s, /quantity/i)
   if (quantity) await s.type(quantity, '1')
+  const payAsset = labelled(s, /which asset buyers pay in/i)
+  if (payAsset) await s.type(payAsset, 'EMBER')
+  const itemAsset = labelled(s, /asset code the item itself carries/i)
+  if (itemAsset) await s.type(itemAsset, 'EMBER')
 }

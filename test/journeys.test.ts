@@ -1362,7 +1362,15 @@ describe('the catalogue and this file agree', () => {
 
 /* ── helpers ────────────────────────────────────────────────────────────────────────────────── */
 
-/** Fill the create-listing form with a valid draft, returning the item urn it used. */
+/**
+ * Fill the create-listing form with a valid draft, returning the item urn it used.
+ *
+ * The two asset codes are typed rather than defaulted. The form opens both blank on purpose — it
+ * used to open them pre-filled with the retired `SHARD` (micro-org #227 §2) and now offers no
+ * default at all, so `Save this as a draft` is disabled until a seller supplies them
+ * (`UNCHOSEN_ASSET_CODE`, `src/lib/market.ts`; the rule is owned by `test/sell-form.test.ts`).
+ * A helper that did not fill them would leave every scenario below clicking a dead button.
+ */
 async function fillSellForm(s: Screen): Promise<string> {
   const urn = 'urn:cf:token:hearth:testnet:0xfeedface'
   const boxes = s.allByRole('textbox')
@@ -1370,10 +1378,14 @@ async function fillSellForm(s: Screen): Promise<string> {
     boxes.find((el) => want.test(labelFor(el)))
   const urnField = byLabel(/urn|item/i) ?? boxes[0]
   if (urnField) await s.type(urnField, urn)
-  const price = byLabel(/asking|bidding opens|price|amount/i)
+  const price = byLabel(/asking|bidding opens|amount/i)
   if (price) await s.type(price, '2500000000000000000')
   const quantity = byLabel(/quantity/i)
   if (quantity) await s.type(quantity, '1')
+  const payAsset = byLabel(/which asset buyers pay in/i)
+  if (payAsset) await s.type(payAsset, 'EMBER')
+  const itemAsset = byLabel(/asset code the item itself carries/i)
+  if (itemAsset) await s.type(itemAsset, 'EMBER')
   return urn
 }
 
