@@ -64,6 +64,72 @@ export const PRICING_MODES: readonly PricingMode[] = ['fixed', 'auction', 'offer
 export type SettlementMode = 'custodial' | 'onchain'
 export const SETTLEMENT_MODES: readonly SettlementMode[] = ['custodial', 'onchain']
 
+/**
+ * **The asset code a new listing starts as: nothing.** There is no default, and this constant is
+ * the name of that hole rather than a value standing in for one.
+ *
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * WHY THERE IS NO DEFAULT, WRITTEN OUT BECAUSE THE OBVIOUS EDIT IS TO PUT ONE BACK
+ *
+ * `src/pages/sell.tsx` opened every create-listing form with `useState('SHARD')` — for the price
+ * asset and for the item asset — and rendered both as the visible value of a text input. SHARD was
+ * retired on 2026-08-04 (`RETIRED_ASSETS = Object.freeze(['SHARD'])`,
+ * `contracts/packages/chain/src/index.ts`; the sibling `assertIssuable` throws for exactly this
+ * reason: "a retired asset arriving on a write path is a configuration error"). So the default
+ * offered every seller a listing denominated in an asset nothing may newly be denominated in, and
+ * a seller who did not edit the field got one. That is `cloudsforge-online/micro-org` #227 §2, and
+ * it is the THIRD retired-asset reference to reach a user surface — #15 and #182 were the others.
+ *
+ * The obvious repair is `useState('EMBER')`. It is refused here, and there are three reasons, in
+ * increasing order of how much they matter.
+ *
+ *   1. It is the same edit that produced the defect. A typed asset code goes stale in silence:
+ *      the code that was right the day it was typed is the code that is wrong the day it is
+ *      retired, and nothing in this repository would notice — which is precisely what happened.
+ *
+ *   2. **There is no list here to derive it from, and the ones nearby are the wrong set.** This
+ *      bundle depends on `@cloudsforge/ui`, react and react-router and nothing else — no
+ *      `@cloudsforge/contracts-*`, deliberately (`src/lib/money.ts` restates the decimals it needs
+ *      "rather than imported because this bundle does not depend on `@cloudsforge/contracts`").
+ *      Even with the dependency, `contracts/packages/chain`'s `ON_CHAIN_ASSETS` is NOT the set this
+ *      field accepts: `market/src/server.ts` types it `LedgerAssetCode`, which is
+ *      `AssetCode | 'USD' | TokenAssetCode` (`contracts/packages/money/src/index.ts`), and a
+ *      `TOKEN:<address>` code is unbounded — `src/lib/money.ts` handles exactly that case and
+ *      refuses to guess its decimals. A `<select>` built from the chain assets would quietly stop
+ *      a seller listing in a token the market really does take. An enumerated control over a set
+ *      that is not the accepted set is a plausible screen over nothing.
+ *
+ *   3. **Nothing tells this page which asset this seller should be paid in.** `micro-market`
+ *      registers no assets route — the 23 routes it serves are enumerated in `.github/workflows/
+ *      ci.yml`, and none of them answers "what may I denominate in" — and `market/src/server.ts`
+ *      validates the field with `requireString` alone, so the service itself has no list either.
+ *      The seller's own past listings are not an answer: those are exactly where the retired code
+ *      still lives.
+ *
+ * So the honest default is the absence of one, and the seller is made to choose. `micro-org` #227
+ * records what was already right and must not change with it: `src/components/money.tsx` renders
+ * whatever `assetCode` the server sent, and `src/lib/money.ts` keeps `SHARD: 0` because 114 live
+ * SHARD accounts are still supervised. Retired means "nothing new may be denominated in it", not
+ * "unknown" — reading and writing are different rules, and only the WRITE path is wrong here.
+ *
+ * `test/sell-form.test.ts` binds this: it fails if any asset code this bundle can name is typed
+ * into a page as a `useState` initialiser again.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ */
+export const UNCHOSEN_ASSET_CODE = ''
+
+/**
+ * Has the seller actually chosen an asset code?
+ *
+ * Trimmed, because `requireString` in `market/src/server.ts` trims before it checks
+ * (`typeof value !== 'string' || value.trim().length === 0` → 400 `assetCode is required`). A form
+ * that let a space through would send a request the service refuses, and the reader would be shown
+ * a 400 for a field that looks filled in.
+ */
+export function assetCodeChosen(code: string): boolean {
+  return code.trim() !== ''
+}
+
 /** `ListingStatus` — `listings.ts`. The browse route defaults to `active` (server.ts). */
 export type ListingStatus = 'draft' | 'active' | 'settling' | 'sold' | 'cancelled' | 'expired'
 export const LISTING_STATUSES: readonly ListingStatus[] = [

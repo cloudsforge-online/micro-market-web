@@ -16,6 +16,16 @@
  *
  * `diagnoseActivation` in `lib/escrow.ts` separates them, and this page renders the two with
  * different words, a different tone and a different suggested action.
+ *
+ * ── The two asset-code fields start EMPTY, and that is the fix rather than an omission ─────────
+ *
+ * They used to start `'SHARD'`, which is retired, so every new listing form opened pre-filled with
+ * an asset nothing may newly be denominated in. `UNCHOSEN_ASSET_CODE` in `lib/market.ts` carries
+ * the full argument for why the repair is an empty field and not a different typed code; the short
+ * version is that this bundle has no list to derive one from and the service publishes none, so the
+ * only honest thing on the screen is a hole with a label on it. `Save this as a draft` stays
+ * disabled until both are filled, and the preview does not render an amount until the price asset
+ * is chosen — an amount without its unit is the defect `components/money.tsx` exists to prevent.
  */
 import { useCallback, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -39,7 +49,9 @@ import {
   ASSET_KINDS,
   PRICING_MODES,
   SETTLEMENT_MODES,
+  UNCHOSEN_ASSET_CODE,
   activateListing,
+  assetCodeChosen,
   createListing,
   listListings,
   type AssetKind,
@@ -338,8 +350,10 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
   const [pricingMode, setPricingMode] = useState<PricingMode>('fixed')
   const [settlementMode, setSettlementMode] = useState<SettlementMode>('custodial')
   const [itemUrn, setItemUrn] = useState('')
-  const [assetCode, setAssetCode] = useState('SHARD')
-  const [itemAssetCode, setItemAssetCode] = useState('SHARD')
+  // Both start unchosen. Neither may be given a typed code — see `UNCHOSEN_ASSET_CODE`
+  // (`lib/market.ts`) for why, and `test/sell-form.test.ts`, which fails if one comes back.
+  const [assetCode, setAssetCode] = useState(UNCHOSEN_ASSET_CODE)
+  const [itemAssetCode, setItemAssetCode] = useState(UNCHOSEN_ASSET_CODE)
   const [price, setPrice] = useState('')
   const [quantity, setQuantity] = useState('1')
   const [royaltyBps, setRoyaltyBps] = useState('0')
@@ -362,6 +376,11 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
   const preview = useMemo(() => {
     const amount = parseAmountOrNull(price)
     if (amount === null || amount <= 0n || !royaltyOk) return null
+    // No asset chosen, no table. `<Amount>` puts the asset code beside every figure it renders
+    // (`components/money.tsx`: "`1,000` is not a price. `1,000 SHARD` is."), so previewing a split
+    // before the seller has picked one would print four amounts with an empty unit after each —
+    // numbers that look finished and say nothing about what they are counted in.
+    if (!assetCodeChosen(assetCode)) return null
     if (bps > 0 && royaltySubject.trim() === '') return null
     try {
       return previewBreakdown({
@@ -388,8 +407,11 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
           pricingMode,
           settlementMode,
           itemUrn: itemUrn.trim(),
-          itemAssetCode,
-          assetCode,
+          // Trimmed for the same reason `itemUrn` is: `requireString` (`market/src/server.ts`)
+          // trims before it stores, so an untrimmed code here would make the request body and the
+          // stored listing differ by whitespace — and the replay check is over the body.
+          itemAssetCode: itemAssetCode.trim(),
+          assetCode: assetCode.trim(),
           price: amount === null ? null : amount.toString(),
           quantity: parseAmount(quantity, 'quantity').toString(),
           royaltyBps: bps,
@@ -477,13 +499,28 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
             onChange={(event) => setPrice(event.target.value)}
           />
         </label>
+        {/*
+          Both of these open EMPTY and there is no placeholder standing in for a code, because a
+          greyed-out example is read as a suggestion and a suggestion is what has to be right. See
+          `UNCHOSEN_ASSET_CODE` in `lib/market.ts`. The help sentences say where the answer comes
+          from — the seller's own balances — rather than naming a code we would then have to keep
+          current here.
+        */}
         <label className="mk-field">
           <span className="mk-field__label">Which asset buyers pay in</span>
           <input className="cf-input" value={assetCode} onChange={(e) => setAssetCode(e.target.value)} />
+          <span className="mk-field__help">
+            There is no default and we have not guessed one. Type the code your price is
+            denominated in, exactly as it appears beside that balance in your wallet.
+          </span>
         </label>
         <label className="mk-field">
           <span className="mk-field__label">Asset code the item itself carries</span>
           <input className="cf-input" value={itemAssetCode} onChange={(e) => setItemAssetCode(e.target.value)} />
+          <span className="mk-field__help">
+            Not the same answer as the box above unless it happens to be: this one is the code the
+            item's own balance is held under, not the one you are asking to be paid in.
+          </span>
         </label>
         <label className="mk-field">
           <span className="mk-field__label">Quantity</span>
@@ -516,6 +553,19 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
         )}
       </div>
 
+      {(!assetCodeChosen(assetCode) || !assetCodeChosen(itemAssetCode)) && (
+        // The hole, named. Blank fields with a disabled button and no sentence read as a broken
+        // form; this says which two are missing and why nothing filled them in. Not `role="alert"`
+        // — it is the form's opening state, not a failure, and an assertive announcement on mount
+        // would talk over a screen reader reading the panel.
+        <p className="mk-note mk-note--strong">
+          Two boxes are deliberately blank and neither has a default: which asset buyers pay in, and
+          the code the item itself carries. We do not know which assets you hold, so anything we
+          pre-filled would be a guess you would have to notice was wrong — and the last guess this
+          form made was an asset that has since been withdrawn. Fill both in and this saves.
+        </p>
+      )}
+
       {!royaltyOk && (
         <p className="mk-note mk-note--strong">
           A royalty is a whole number of basis points. 250 means 2.5%, 1000 means 10%, and 10%
@@ -538,7 +588,16 @@ function CreateListingForm({ onCreated }: { onCreated: () => void }) {
       <button
         type="button"
         className="cf-btn cf-btn--ember"
-        disabled={busy || itemUrn.trim() === '' || !royaltyOk}
+        // Both asset codes are required by `market/src/server.ts` (`requireString`, which 400s on
+        // a blank or whitespace-only value), so an enabled button here could only produce a
+        // refusal the seller has to translate back into the field they left empty.
+        disabled={
+          busy ||
+          itemUrn.trim() === '' ||
+          !assetCodeChosen(assetCode) ||
+          !assetCodeChosen(itemAssetCode) ||
+          !royaltyOk
+        }
         onClick={() => void submit()}
       >
         {busy ? 'Saving…' : 'Save this as a draft'}
