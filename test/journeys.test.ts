@@ -1295,6 +1295,76 @@ describe('a listing gallery', () => {
   })
 })
 
+/* ══════════════════════════════════════════════════════════════════════════════════════════════
+   The sections strip — not a doc 22 scenario either
+
+   Doc 22 assigns no id to the chrome, so this carries none: an invented id fails the catalogue
+   meta-test below, correctly.
+
+   It is here rather than in a stylesheet test because a stylesheet test cannot see it. `.mk-subnav`
+   was deleted from `src/styles.css` and `SubNav` adopted in `src/components/shell.tsx`, and a grep
+   over the stylesheet goes green on either half alone — including on the half that leaves this
+   surface's sections row completely unstyled. This file is the one that mounts the real `App` in a
+   document, so this is where the question "is the strip a reader SEES the shared one" can be asked.
+
+   Measured 2026-08-10: ten frontends declared this row themselves under six prefixes. This copy was
+   `display: flex` with no `overflow-x` and its links had no `white-space: nowrap`, so a phone
+   squeezed six labels plus the wordmark, broke them mid-word, and put the rest past an edge that
+   could not be scrolled to. The shared `.cf-subnav__inner` scrolls and `.cf-subnav__link` does not
+   wrap — but only for the links that actually carry those classes, which is what is asserted.
+   ══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+describe('the sections strip is the design system’s', () => {
+  it('renders the shared landmark, and every section link in it is a shared link', async () => {
+    await withScreen(h(App), { url: `${ORIGIN}/fees`, routes: {} }, async (s) => {
+      const strip = s.document.querySelector('nav.cf-subnav')
+      assert.ok(strip, 'the sections strip on screen is not the shared `.cf-subnav`')
+      // The repository's own wording for the landmark, carried across unchanged: only the strip
+      // was homogenised, not the name a screen reader announces for it.
+      assert.equal(strip.getAttribute('aria-label'), 'Sections')
+      // The element that actually scrolls. Without it the links are `nowrap` inside a row that
+      // still cannot be reached past its edge, which is defect 1 half-fixed.
+      assert.ok(strip.querySelector('.cf-subnav__inner'), 'the strip has no scrolling inner')
+
+      const links = [...strip.querySelectorAll('a')]
+      assert.ok(links.length >= 4, `the strip rendered ${links.length} links`)
+      for (const link of links) {
+        assert.ok(
+          link.classList.contains('cf-subnav__link'),
+          `"${s.textOf(link)}" is not a shared link. Every one, not at least one: a half-adopted ` +
+            'strip is a row where some labels wrap and some do not.',
+        )
+      }
+      // `/fees` is one of them, so exactly one is current — and the shared spelling is
+      // `--current`, where this app's local class was `is-active`.
+      assert.equal(
+        links.filter((a) => a.classList.contains('cf-subnav__link--current')).length,
+        1,
+        'the current section is not marked, or more than one is',
+      )
+      // Scoped to the strip: `is-active` also spells the pressed state of Browse's Kind/Order
+      // toggle, which is a different control and is staying.
+      assert.equal(
+        strip.querySelector('[class*="mk-subnav"], .is-active'),
+        null,
+        'the deleted local sub-nav classes are still being rendered',
+      )
+      assert.equal(s.document.querySelector('[class*="mk-subnav"]'), null, 'a local strip remains')
+    })
+  })
+
+  it('keeps the wordmark, which is this surface’s own and not a copy of anything shared', async () => {
+    // The one rule that survived the deletion. `SubNav` takes children rather than a list of
+    // addresses precisely so a surface with something extra to put in the row does not need a
+    // second strip to put it in — so it must be INSIDE the shared strip, not beside it.
+    await withScreen(h(App), { url: `${ORIGIN}/fees`, routes: {} }, async (s) => {
+      const wordmark = s.document.querySelector('nav.cf-subnav .mk-wordmark')
+      assert.ok(wordmark, 'the product wordmark is not inside the shared strip')
+      assert.match(s.textOf(wordmark), /Forge Market/)
+    })
+  })
+})
+
 describe('the catalogue and this file agree', () => {
   it('every id doc 22 assigns to this surface is accounted for exactly once', () => {
     const ids = SCENARIOS.map((s) => s.id)
