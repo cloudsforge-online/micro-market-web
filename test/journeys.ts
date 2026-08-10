@@ -337,6 +337,20 @@ export const SCENARIOS: readonly Scenario[] = [
     tier: 'T1',
   },
 
+  /* ── browser mining, which doc 22 predates ────────────────────────────────────────────────── */
+  {
+    id: 'BJ-MINE-LINK',
+    what: 'the bar offers browser mining beside the account, as a link to the surface that hosts it, and claims no payment',
+    asserts: 'presentation',
+    tier: 'T1',
+    gate: true,
+    // What is asserted here is that the control is present, is a real anchor, and points at Forge
+    // Hub's mining address. What CANNOT be asserted from this repository is that a session starts
+    // when the link is followed: the miner is a WebSocket and two Web Workers on hub.<apex>, a
+    // different origin, and nothing in this bundle can observe it. That half is BJ-MINE-01..07 in
+    // micro-hub-web, which mounts the miner and presses the control.
+  },
+
   /* ── 5.1 the universal per-surface property ───────────────────────────────────────────────── */
   {
     id: 'BJ-MARKET-404',
@@ -353,6 +367,11 @@ export const SCENARIOS: readonly Scenario[] = [
  * hazard, §6.19's two page-level rows, the four Group T rows that name a property this surface
  * has, and the one §5.1 row. `journeys.test.ts` asserts SCENARIOS covers exactly this set, so a
  * scenario cannot be dropped by deleting its test.
+ *
+ * `BJ-MINE-LINK` is minted here rather than transcribed, for the reason `BJ-MARKET-404` was: doc 22
+ * predates browser mining entirely — the feature was built afterwards, on one page of one surface —
+ * and it assigns no id to a control that appears in the shared bar of every surface. An id invented
+ * inside doc 22's own `BJ-MKT` sequence would collide the first time the document extends it.
  */
 export const DOC22_IDS: readonly string[] = [
   'BJ-MKT-01',
@@ -393,6 +412,7 @@ export const DOC22_IDS: readonly string[] = [
   'BJ-A11Y-10',
   'BJ-A11Y-12',
   'BJ-MARKET-404',
+  'BJ-MINE-LINK',
 ]
 
 export const byId = (id: string): Scenario => {

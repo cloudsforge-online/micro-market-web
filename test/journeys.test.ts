@@ -32,11 +32,14 @@ import { describe, it } from 'node:test'
 import { createElement as h, type ReactElement } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 
+import { HUB_MINE_PATH, NOT_PAID_CLAUSE } from '@cloudsforge/ui'
+
 import { withScreen, type Routes, type Screen } from './dom.ts'
 import * as fx from './fixtures.ts'
 import { DOC22_IDS, SCENARIOS } from './journeys.ts'
 import { App } from '../src/app.tsx'
 import { AuthProvider } from '../src/lib/auth.tsx'
+import { hosts } from '../src/lib/hosts.ts'
 import { ROUTES } from '../src/lib/routes.ts'
 import { formatMoney } from '../src/lib/money.ts'
 import { BrowsePage } from '../src/pages/browse.tsx'
@@ -1193,6 +1196,86 @@ describe('BJ-MARKET-404 — an unowned address answers 404', () => {
       // this test reads is the one nginx is generated against (test/routes.test.ts).
       const owned = ROUTES.map((r) => r.path)
       assert.ok(!owned.includes('nothing-here'))
+    })
+  })
+})
+
+describe('BJ-MINE-LINK — browser mining is offered from the bar', () => {
+  /**
+   * The owner's report was that starting a browser miner is "hidden deep in mining page". It now
+   * has a place in the one piece of chrome every surface renders, immediately before the account.
+   *
+   * What this surface can honestly assert is the whole of what this surface does: the control is
+   * present on an ordinary address, it is a real ANCHOR to the surface that hosts the miner, and
+   * it claims no payment. The session itself belongs to `hub.<apex>` — a different origin — and is
+   * asserted in micro-hub-web by BJ-MINE-01..07, which mount the miner and press it.
+   */
+  it('BJ-MINE-LINK T1: the bar links to the mining surface, beside the account, promising nothing', async () => {
+    await withScreen(h(App), { url: `${ORIGIN}/`, routes: { 'GET /v1/listings': { body: { listings: [fx.listing()] } } } }, async (s) => {
+      const bar = s.document.querySelector('.cf-bar')
+      assert.ok(bar, 'this surface no longer renders the company bar at all')
+
+      const found = [...bar.querySelectorAll('.cf-mine')]
+      assert.equal(
+        found.length,
+        1,
+        `expected one mining control in the bar, found ${found.length}. The owner's report was ` +
+          'that browser mining was reachable only from deep inside one page',
+      )
+      const mine = found[0] as Element
+
+      // ── A LINK, NOT AN onClick ──────────────────────────────────────────────────────────────
+      // The account entry spent four months as a `<button>` pointing at the wrong place precisely
+      // because a destination expressed as a handler is invisible to everything that reads links
+      // (micro-hub-web `test/account-link.test.ts`). This one is an anchor or it is nothing.
+      assert.equal(
+        mine.tagName.toLowerCase(),
+        'a',
+        'the mining control is not an anchor, so it cannot be middle-clicked, copied or crawled',
+      )
+
+      // ── AND IT POINTS AT THE SURFACE THAT CAN ACTUALLY MINE ─────────────────────────────────
+      // Resolved through the registry, never written out: this bundle is served from localhost,
+      // from a preview host and from the apex, and a literal would be right on one of them.
+      assert.equal(
+        mine.getAttribute('href'),
+        `${hosts().hub}${HUB_MINE_PATH}`,
+        'the mining control does not point at Forge Hub’s mining address',
+      )
+
+      // ── AND IT IS BESIDE THE ACCOUNT, WHICH IS THE WHOLE OF THE CHANGE ──────────────────────
+      // Asserted as TAB ORDER rather than as a CSS neighbour, because that is the property a
+      // reader has: the mining control is the last thing before the account on every surface. A
+      // stylesheet can move a box; only document order moves this.
+      const order = s.tabbables()
+      const account = s.byRole('button', 'Sign in')
+      assert.equal(
+        order.indexOf(account) - order.indexOf(mine),
+        1,
+        'the mining control is no longer immediately before the account in the tab order',
+      )
+
+      // ── AND IT PROMISES NOTHING THE POOL DOES NOT PAY ───────────────────────────────────────
+      // `pool/src/payouts.ts` derives `payoutsImplemented` and it is false today, so any surface
+      // that implies settlement is a defect. The clause is the design system's own exported
+      // string rather than a paraphrase this repository keeps a second copy of.
+      const description = s.document.getElementById(mine.getAttribute('aria-describedby') ?? '')
+      assert.ok(description, 'the mining control carries no description for a screen reader')
+      assert.ok(
+        (description.textContent ?? '').includes(NOT_PAID_CLAUSE),
+        'the mining control does not carry the not-paid clause, on a surface where every other ' +
+          'number on screen is money',
+      )
+      // No currency mark and no figure anywhere in the control. On a marketplace, a number beside
+      // the word Mine is read as what the mining is worth.
+      const shown = `${mine.textContent ?? ''} ${description.textContent ?? ''}`
+      assert.doesNotMatch(
+        shown,
+        /[$€£]|\d/,
+        `the mining control shows a figure (${shown.trim()}), and nothing is paid`,
+      )
+
+      s.clean('the bar’s mining control')
     })
   })
 })
