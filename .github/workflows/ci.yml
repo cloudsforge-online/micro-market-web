@@ -380,16 +380,35 @@ jobs:
           # reusable image job cannot make, because it requires a 200 for any deep link.
           unknown=$(curl -s -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:55630/nope/not/a/route || true)
           [ "$unknown" = "404" ] || { echo "::error::an unknown address returned $unknown; it must be 404"; exit 1; }
-          curl -s -m 5 http://127.0.0.1:55630/nope/not/a/route | grep -q '<div id="root">' \
-            || { echo "::error::the 404 did not serve the app shell"; exit 1; }
+          # NOT A PIPE INTO `grep -q` — the hazard this file already avoids with here-strings
+          # elsewhere, on the one check that still had it. grep -q exits at its first match and
+          # closes the pipe while curl is still writing; curl dies of EPIPE (23), `pipefail` makes
+          # that the pipeline's status, and the `||` then reports that the shell was not served —
+          # about a shell that was served perfectly. The log cannot tell that flake from the defect
+          # the check exists to catch. Latent here by layout alone, 81 bytes following the match in
+          # this repo's index.html, and layout moves: hub-web's 163a319 put the crawler's copy
+          # INSIDE `<div id="root">` on 2026-08-09, the match went to byte 7,743 of 12,163, and
+          # micro-hub-web#16 then failed here twice in a row with the build green in the same run.
+          # Measured 2026-08-10 — micro-org#347. Capturing first leaves no pipe to close early, and
+          # `case` is an exact glob rather than a regex.
+          shell_404=$(curl -s -m 5 http://127.0.0.1:55630/nope/not/a/route || true)
+          case "$shell_404" in
+            *'<div id="root">'*) ;;
+            *) echo "::error::the 404 did not serve the app shell"; exit 1 ;;
+          esac
 
           # A missing asset must 404 on its own terms rather than being answered with HTML.
           asset=$(curl -s -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:55630/assets/does-not-exist.js || true)
           [ "$asset" = "404" ] || { echo "::error::a missing asset returned $asset"; exit 1; }
 
           # The image must carry no environment file.
-          docker run --rm --entrypoint sh market-web:ci -c 'ls -a /usr/share/nginx/html | grep -c "^\.env" || true' | grep -qx 0 \
-            || { echo "::error::an env file reached the image"; exit 1; }
+          # `case` on the captured body rather than a pipe into `grep -q`, for the reason given at
+          # the 404 check above — micro-org#347.
+          env_files=$(docker run --rm --entrypoint sh market-web:ci -c 'ls -a /usr/share/nginx/html | grep -c "^\.env" || true' || true)
+          case "$env_files" in
+            0) ;;
+            *) echo "::error::an env file reached the image"; exit 1 ;;
+          esac
 
           echo "ok: owned routes are served, unknown addresses 404 with the shell, no env in the image"
 
@@ -414,7 +433,10 @@ jobs:
             probe "$path" 'Cache-Control'
           done
           # And a hashed asset, which is where the estate found this the first time.
-          asset=$(curl -s -m 5 http://127.0.0.1:55630/ | grep -o '/assets/[^"]*\.js' | head -1)
+          # `|| true`: `grep … | head -1` closes the pipe at the first line, so the producer takes
+          # SIGPIPE and `pipefail` hands that to this assignment under `set -e` — the same broken
+          # pipe as above, in the same step. The emptiness check below is what decides. micro-org#347.
+          asset=$(curl -s -m 5 http://127.0.0.1:55630/ | grep -o '/assets/[^"]*\.js' | head -1 || true)
           [ -n "$asset" ] || { echo "::error::the shell names no hashed script"; exit 1; }
           probe "$asset" 'X-Content-Type-Options'
           probe "$asset" 'Cache-Control'
