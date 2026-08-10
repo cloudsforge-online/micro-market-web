@@ -50,29 +50,38 @@ body {
  * left behind is worse than either: the next reader edits it and nothing happens.
  */
 
-/* ----------------------------- sub-nav ----------------------------- */
+/* ----------------------------- sub-nav ----------------------------- *
+ * `.mk-subnav`, `.mk-subnav__inner`, `.mk-subnav__link`, `:hover`, `.is-active` and
+ * `:focus-visible` WERE HERE. They are `.cf-subnav*` in @cloudsforge/ui now, rendered by `SubNav`
+ * in `src/components/shell.tsx`.
+ *
+ * Measured 2026-08-10, across the ten frontends that each declared this row themselves under six
+ * prefixes: this copy was `display: flex` with no `overflow-x`, and its links had no
+ * `white-space: nowrap`, so a narrow viewport squeezed the labels and broke them mid-word with no
+ * way to reach the ones past the edge; and its measure was `78rem` — 1248px against the bar's and
+ * the footer's 1200px — so the strip sat 24px proud of the chrome on each side.
+ *
+ * Deleted rather than repaired in place. A private copy beside the shared one is exactly what
+ * produced ten of them, each correct on the day it was pasted.
+ *
+ * ONE RULE SURVIVES, BELOW: `.mk-wordmark`. See the note on it.
+ * ------------------------------------------------------------------- */
 
 /*
- * Docked at exactly the bar's height. `--cf-bar-h` is the token the bar itself is sized with, so
- * the two cannot drift; a copied `46px` would leave a seam the day the bar changes.
+ * The product wordmark at the head of the sections row, and the one piece of this strip that is
+ * genuinely local rather than a copy of something shared.
+ *
+ * It is NOT pushed into the design system, and the reason is that it would be wrong there: no
+ * other surface in the estate puts a product name inside its own sub-nav, because on every other
+ * surface the bar directly above already marks the current product in the switcher. Market keeps
+ * it because the marketplace is the one surface people arrive at from a pasted listing link
+ * rather than from the switcher. A `.cf-subnav__wordmark` would therefore be a shared class with
+ * exactly one caller — which is the shape a design system grows drift in, not the shape it
+ * removes it with.
+ *
+ * `SubNav` takes children rather than a list of addresses, so this rides inside the shared strip
+ * as an ordinary child and inherits its scrolling and its gutter.
  */
-.mk-subnav {
-  position: sticky;
-  top: var(--cf-bar-h);
-  z-index: 40;
-  background: var(--cf-bg-raised);
-  border-bottom: 1px solid var(--cf-line);
-}
-
-.mk-subnav__inner {
-  display: flex;
-  gap: 0.25rem;
-  align-items: stretch;
-  max-width: 78rem;
-  margin: 0 auto;
-  padding: 0 1rem;
-}
-
 .mk-wordmark {
   display: inline-flex;
   align-items: center;
@@ -80,7 +89,7 @@ body {
   margin-right: 0.5rem;
   border-right: 1px solid var(--cf-line);
   color: var(--cf-fg-dim);
-  font-size: 0.875rem;
+  font-size: var(--cf-text-sm);
   letter-spacing: 0.02em;
   white-space: nowrap;
 }
@@ -91,38 +100,16 @@ body {
   margin-left: 0.3ch;
 }
 
-.mk-subnav__link {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.7rem 0.85rem;
-  color: var(--cf-fg-dim);
-  text-decoration: none;
-  font-size: 0.875rem;
-  /* The active marker is a 2px underline in the accent, and the LABEL also changes weight and
-     colour: colour is never the only channel. */
-  border-bottom: 2px solid transparent;
-}
-
-.mk-subnav__link:hover {
-  color: var(--cf-fg);
-  background: var(--cf-surface-hover);
-}
-
-.mk-subnav__link.is-active {
-  color: var(--cf-fg);
-  font-weight: 600;
-  border-bottom-color: var(--cf-accent);
-}
-
-.mk-subnav__link:focus-visible {
-  outline: 2px solid var(--cf-accent);
-  outline-offset: -2px;
-}
-
 /* ------------------------------ page ------------------------------- */
 
 .mk-main {
-  max-width: 78rem;
+  /* The bar's and the footer's own measure, not a second number of this page's own. This was
+     `78rem` — 1248px against `.cf-bar__inner`'s and `.cf-foot__inner`'s 1200px, measured
+     2026-08-10 — so the page content sat 24px proud of the chrome above and below it on each
+     side. The deleted sub-nav agreed with THIS number rather than with the chrome, which is what
+     made the overhang look deliberate: two rows lined up with each other and neither lined up
+     with the bar. */
+  max-width: var(--cf-max-w);
   margin: 0 auto;
   padding: 1.5rem 1rem 4rem;
 }
@@ -138,12 +125,12 @@ body {
 
 .mk-page__title {
   margin: 0;
-  font-size: 1.45rem;
+  font-size: var(--cf-text-2xl);
   letter-spacing: -0.01em;
 }
 
 .mk-page__title--urn {
-  font-size: 1.1rem;
+  font-size: var(--cf-text-lg);
   word-break: break-all;
 }
 
@@ -151,14 +138,14 @@ body {
   margin: 0.4rem 0 0;
   max-width: 46rem;
   color: var(--cf-fg-dim);
-  font-size: 0.9rem;
+  font-size: var(--cf-text-sm);
   line-height: 1.55;
 }
 
 .mk-eyebrow {
   margin: 0;
   color: var(--cf-accent);
-  font-size: 0.75rem;
+  font-size: var(--cf-text-xs);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -204,7 +191,7 @@ body {
 
 .mk-panel__title {
   margin: 0 0 0.6rem;
-  font-size: 0.95rem;
+  font-size: var(--cf-text-md);
   color: var(--cf-fg);
   font-weight: 600;
 }
@@ -215,14 +202,14 @@ body {
 
 .mk-panel__body {
   margin: 0 0 0.6rem;
-  font-size: 0.9rem;
+  font-size: var(--cf-text-sm);
   line-height: 1.55;
   color: var(--cf-fg-dim);
 }
 
 .mk-note {
   color: var(--cf-fg-mute);
-  font-size: 0.82rem;
+  font-size: var(--cf-text-xs);
   line-height: 1.5;
   margin: 0.5rem 0 0;
 }
@@ -235,14 +222,14 @@ body {
   margin: 0;
   padding-left: 1.1rem;
   color: var(--cf-fg-dim);
-  font-size: 0.9rem;
+  font-size: var(--cf-text-sm);
   line-height: 1.7;
 }
 
 .mk-scope {
   margin: 0 0 0.9rem;
   color: var(--cf-fg-dim);
-  font-size: 0.85rem;
+  font-size: var(--cf-text-sm);
 }
 
 /* ------------------------------ filters ---------------------------- */
@@ -279,7 +266,7 @@ body {
 }
 
 .mk-field__label {
-  font-size: 0.78rem;
+  font-size: var(--cf-text-xs);
   color: var(--cf-fg-mute);
 }
 
@@ -342,27 +329,27 @@ body {
 }
 
 .mk-card__kind {
-  font-size: 0.72rem;
+  font-size: var(--cf-text-2xs);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--cf-fg-mute);
 }
 
 .mk-card__urn {
-  font-size: 0.82rem;
+  font-size: var(--cf-text-xs);
   word-break: break-all;
   line-height: 1.4;
 }
 
 .mk-card__title {
-  font-size: 1rem;
+  font-size: var(--cf-text-md);
   font-weight: 600;
 }
 
 .mk-card__body {
   margin: 0;
   color: var(--cf-fg-dim);
-  font-size: 0.85rem;
+  font-size: var(--cf-text-sm);
 }
 
 .mk-card__price {
@@ -372,7 +359,7 @@ body {
 }
 
 .mk-card__price-label {
-  font-size: 0.72rem;
+  font-size: var(--cf-text-2xs);
   color: var(--cf-fg-mute);
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -387,7 +374,7 @@ body {
 .mk-card__clock,
 .mk-card__stamp {
   margin: 0;
-  font-size: 0.78rem;
+  font-size: var(--cf-text-xs);
   color: var(--cf-fg-mute);
 }
 
@@ -412,7 +399,7 @@ body {
   flex-wrap: wrap;
   padding: 0.65rem 0;
   border-bottom: 1px solid var(--cf-line);
-  font-size: 0.88rem;
+  font-size: var(--cf-text-sm);
 }
 
 .mk-rows__row:last-child {
@@ -427,7 +414,7 @@ body {
 
 .mk-rows__when {
   color: var(--cf-fg-mute);
-  font-size: 0.8rem;
+  font-size: var(--cf-text-xs);
   margin-left: auto;
 }
 
@@ -484,7 +471,7 @@ body {
 
 .mk-stamp {
   color: var(--cf-fg-mute);
-  font-size: 0.8rem;
+  font-size: var(--cf-text-xs);
 }
 
 .mk-countdown {
@@ -496,14 +483,14 @@ body {
 .mk-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.88rem;
+  font-size: var(--cf-text-sm);
 }
 
 .mk-table__caption {
   caption-side: top;
   text-align: left;
   color: var(--cf-fg-mute);
-  font-size: 0.78rem;
+  font-size: var(--cf-text-xs);
   padding-bottom: 0.4rem;
 }
 
@@ -517,7 +504,7 @@ body {
 
 .mk-table thead th {
   color: var(--cf-fg-mute);
-  font-size: 0.75rem;
+  font-size: var(--cf-text-xs);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -555,7 +542,7 @@ body {
 
 .mk-breakdown__ok {
   margin: 0.6rem 0 0;
-  font-size: 0.82rem;
+  font-size: var(--cf-text-xs);
   color: var(--cf-fg-dim);
   line-height: 1.5;
 }
@@ -565,7 +552,7 @@ body {
   padding: 0.5rem 0.6rem;
   border: 1px solid var(--cf-danger);
   border-radius: 8px;
-  font-size: 0.85rem;
+  font-size: var(--cf-text-sm);
   color: var(--cf-fg);
   line-height: 1.5;
 }
@@ -575,7 +562,7 @@ body {
   grid-template-columns: minmax(8rem, auto) 1fr;
   gap: 0.4rem 1rem;
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--cf-text-sm);
 }
 
 .mk-facts dt {
@@ -588,7 +575,7 @@ body {
 
 .mk-facts--mono dd {
   font-family: var(--cf-font-mono, ui-monospace, monospace);
-  font-size: 0.82rem;
+  font-size: var(--cf-text-xs);
   word-break: break-all;
 }
 
@@ -604,18 +591,18 @@ body {
   align-items: baseline;
   padding: 0.4rem 0;
   border-bottom: 1px solid var(--cf-line);
-  font-size: 0.85rem;
+  font-size: var(--cf-text-sm);
 }
 
 .mk-offers__who {
   color: var(--cf-fg-dim);
-  font-size: 0.8rem;
+  font-size: var(--cf-text-xs);
 }
 
 .mk-offers__when {
   margin-left: auto;
   color: var(--cf-fg-mute);
-  font-size: 0.78rem;
+  font-size: var(--cf-text-xs);
 }
 
 /* ------------------------------- badges ---------------------------- */
@@ -632,7 +619,7 @@ body {
   padding: 0.15rem 0.5rem;
   border-radius: 999px;
   border: 1px solid var(--cf-line-strong);
-  font-size: 0.75rem;
+  font-size: var(--cf-text-xs);
   white-space: nowrap;
   color: var(--cf-fg-dim);
 }
@@ -680,19 +667,19 @@ body {
 .mk-notice__title {
   margin: 0 0 0.3rem;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: var(--cf-text-sm);
 }
 
 .mk-notice__body {
   margin: 0 0 0.4rem;
-  font-size: 0.85rem;
+  font-size: var(--cf-text-sm);
   line-height: 1.55;
   color: var(--cf-fg-dim);
 }
 
 .mk-notice__meta {
   margin: 0.3rem 0 0;
-  font-size: 0.8rem;
+  font-size: var(--cf-text-xs);
   color: var(--cf-fg-mute);
 }
 
@@ -736,7 +723,7 @@ body {
 .mk-indicator {
   display: flex;
   gap: 0.5rem;
-  font-size: 0.85rem;
+  font-size: var(--cf-text-sm);
   line-height: 1.5;
   color: var(--cf-fg-dim);
 }
@@ -760,7 +747,7 @@ body {
 
 .mk-indicator__detail {
   color: var(--cf-fg-mute);
-  font-size: 0.8rem;
+  font-size: var(--cf-text-xs);
 }
 
 /* ------------------------------ footer ----------------------------- */
@@ -789,7 +776,7 @@ body {
 }
 
 .mk-state__icon {
-  font-size: 1.5rem;
+  font-size: var(--cf-text-2xl);
   line-height: 1;
 }
 
@@ -802,7 +789,7 @@ body {
 .mk-state__meta {
   margin: 0;
   color: var(--cf-fg-dim);
-  font-size: 0.875rem;
+  font-size: var(--cf-text-sm);
   max-width: 34rem;
 }
 
@@ -904,7 +891,7 @@ body {
 
 .mk-gallery-edit__title {
   margin: 0 0 0.5rem;
-  font-size: 0.9rem;
+  font-size: var(--cf-text-sm);
   color: var(--cf-fg-dim);
 }
 
@@ -945,7 +932,7 @@ body {
 .mk-gallery-edit__ord {
   font-variant-numeric: tabular-nums;
   color: var(--cf-fg-mute);
-  font-size: 0.82rem;
+  font-size: var(--cf-text-xs);
   min-width: 1.5rem;
 }
 

@@ -14,6 +14,7 @@ import {
   CookieBanner,
   MainRegion,
   SkipLink,
+  SubNav,
   miningOnHub,
 } from '@cloudsforge/ui'
 import { applyHead, surfaceMeta } from '@cloudsforge/ui/seo'
@@ -62,29 +63,40 @@ export function AppShell() {
         mining={miningOnHub(hosts().hub)}
       />
       {/*
-        Sticky at exactly `var(--cf-bar-h)` — the bar's own height token, not a number copied out
-        of it. When the bar's height changes this moves with it; a hard-coded 46px would leave a
-        seam that only appears on the surfaces nobody rechecked.
+        `SubNav` from @cloudsforge/ui, rather than the `.mk-subnav` this file used to write itself.
+
+        Measured 2026-08-10: ten frontends declared this row in their own stylesheet under six
+        different class prefixes, from one original that had been copied and then edited in place.
+        This copy had two of the three defects that produced. It was `display: flex` with no
+        `overflow-x` and its links had no `white-space: nowrap`, so on a phone SIX labels — plus
+        the wordmark — squeezed, broke mid-word, and the ones past the edge could not be reached at
+        all; and its measure was `78rem`, 1248px, against the 1200px `.cf-bar__inner` and
+        `.cf-foot__inner` use, so the strip sat 24px proud of the bar on each side.
+
+        `.mk-wordmark` STAYS, as a local class layered on the shared strip. It is the one piece of
+        this row that is genuinely this surface's: no other frontend puts a product wordmark inside
+        its sections, and `SubNav` takes children precisely so that a surface with something extra
+        to put in the row does not need a second strip to put it in.
       */}
-      <nav className="mk-subnav" aria-label="Sections">
-        <div className="mk-subnav__inner">
-          <span className="mk-wordmark">
-            Forge <b>Market</b>
-          </span>
-          {NAV.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              // `end` only on the index: without it, `/` matches every path and the Browse tab
-              // stays highlighted on every page.
-              end={item.to === '/'}
-              className={({ isActive }) => `mk-subnav__link${isActive ? ' is-active' : ''}`}
-            >
-              {item.label}
-            </NavLink>
-          ))}
-        </div>
-      </nav>
+      <SubNav label="Sections">
+        <span className="mk-wordmark">
+          Forge <b>Market</b>
+        </span>
+        {NAV.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            // `end` only on the index: without it, `/` matches every path and the Browse tab
+            // stays highlighted on every page.
+            end={item.to === '/'}
+            className={({ isActive }) =>
+              `cf-subnav__link${isActive ? ' cf-subnav__link--current' : ''}`
+            }
+          >
+            {item.label}
+          </NavLink>
+        ))}
+      </SubNav>
       <DocumentMeta />
       {/*
         `MainRegion` rather than a bare `<main>`: same landmark, same class, plus the `id` the
