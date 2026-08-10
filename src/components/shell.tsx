@@ -15,10 +15,11 @@ import {
   MainRegion,
   SkipLink,
   SubNav,
+  miningOnHub,
 } from '@cloudsforge/ui'
 import { applyHead, surfaceMeta } from '@cloudsforge/ui/seo'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { PRODUCT } from '../lib/hosts.ts'
+import { PRODUCT, hosts } from '../lib/hosts.ts'
 import { NAV, ROUTES } from '../lib/routes.ts'
 import { useSession } from '../lib/auth.tsx'
 
@@ -40,11 +41,26 @@ export function AppShell() {
         front page and wrong on Sell, Orders and Fees.
       */}
       <SkipLink />
+      {/*
+        `mining` is the design system's own control, immediately before the account menu.
+
+        The owner's report was that starting a browser miner is "hidden deep in mining page"; the
+        answer is a control in the one piece of chrome every surface renders. This surface passes
+        `miningOnHub()`, which is the `elsewhere` state: the miner is a WebSocket and two Web
+        Workers on ONE origin, `hub.<apex>` is a different origin from this one, and nothing here
+        can observe, start or stop a session over there. So it renders an ANCHOR to the page that
+        can — middle-clickable, openable in a new tab, and visible to every check that reads links,
+        which is the argument `accountSettingsUrl` makes about the account entry.
+
+        `hosts().hub` rather than a literal. This bundle is served from localhost, from a preview
+        host and from the apex, and a written-out URL would be right on exactly one of them.
+      */}
       <CloudsForgeBar
         current={PRODUCT}
         account={account}
         onSignIn={() => signIn()}
         onSignOut={signOut}
+        mining={miningOnHub(hosts().hub)}
       />
       {/*
         `SubNav` from @cloudsforge/ui, rather than the `.mk-subnav` this file used to write itself.
