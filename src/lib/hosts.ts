@@ -6,6 +6,7 @@
  * served from the apex. Nothing here reads a build-time constant; see the note in vite.config.ts.
  */
 import { cloudsforgeHosts, type CloudsForgeHosts, type SurfaceKey } from '@cloudsforge/ui'
+import { viewedHosts } from './viewed.ts'
 
 /**
  * The surface this application IS.
@@ -46,10 +47,20 @@ export function hosts(): CloudsForgeHosts {
   return cloudsforgeHosts()
 }
 
-/** This app's API base, resolved now. Call it per request; never cache it in a module constant. */
+/**
+ * This app's API base, resolved now. Call it per request; never cache it in a module constant.
+ *
+ * `viewedHosts()` rather than `cloudsforgeHosts()` is the whole of the in-place network view at
+ * this layer (micro-org#459). It returns the map it was given, unchanged, until the reader picks
+ * the other network in the bar, and the sibling estate's origins after that — so this line is a
+ * no-op in development, in a preview deployment and for every reader who never touches the
+ * switcher. The `-testnet` WEB hostnames are retired and 302 to their mainnet siblings, but `/v1`
+ * on them is not: that path still answers from the testnet services, which is what makes reading
+ * the other network from this page possible at all. See `lib/viewed.ts`.
+ */
 export function apiBase(): string {
   const origin = typeof window === 'undefined' ? '' : window.location.origin
-  return resolveApiBase(origin, cloudsforgeHosts(), PRODUCT)
+  return resolveApiBase(origin, viewedHosts(), PRODUCT)
 }
 
 /** The page origin, or a stable placeholder when there is no document (tests, prerender). */
