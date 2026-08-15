@@ -227,19 +227,252 @@ body {
 }
 
 .mk-scope {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
   margin: 0 0 0.9rem;
   color: var(--cf-fg-dim);
   font-size: var(--cf-text-sm);
 }
 
-/* ------------------------------ filters ---------------------------- */
+.mk-scope__settles {
+  color: var(--cf-fg-mute);
+  font-size: var(--cf-text-xs);
+}
 
-.mk-filters {
+.mk-scope__settles b {
+  color: var(--cf-fg-dim);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+/* ------------------------------- hero ------------------------------ *
+ * Browse's own head, and the reason it is not `.mk-page__head`: the other six pages here open on
+ * a title and a button, and this one opens on an ARGUMENT — the escrow run — which needs the full
+ * measure and a rule under it. Sharing the class would have meant either a hero on the fees page
+ * or a bare heading on the front door.
+ * ------------------------------------------------------------------- */
+
+.mk-hero {
+  margin-bottom: 1.5rem;
+}
+
+.mk-hero__eyebrow {
+  margin: 0 0 0.5rem;
+  font-family: var(--cf-font-mono);
+  font-size: var(--cf-text-2xs);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--cf-accent);
+}
+
+.mk-hero__top {
   display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
   align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.6rem;
+}
+
+/*
+ * THE ONE TYPOGRAPHIC RISK ON THE PAGE, AND IT IS A REAL ONE: `font-stretch`.
+ *
+ * Bricolage Grotesque ships in this package as a variable font with a WIDTH axis (75%–100%,
+ * declared on the @font-face in tokens.css). Nothing else in the estate touches that axis — every
+ * other surface sets the display face at its default width — so a condensed setting is unmistakably
+ * this page and costs no extra bytes, because the axis is already in the file that is already
+ * loaded. At 80% the two lines of the claim hold together as a block at 60px on a laptop, which is
+ * what makes it read as a saleroom catalogue cover rather than as a marketing headline.
+ *
+ * TWO STEPS OF THE SCALE AND A BREAKPOINT, NOT A `clamp()`. The first draft of this rule set
+ * `clamp(2rem, 5.4vw, 3.75rem)` and `registry.test.ts` refused it — every font-size in this file
+ * has to be a step of the scale, a guard written after 43 literals in 16 near-identical values
+ * were found here, none of which moved when the design system raised the body step. A `clamp` is
+ * three more such literals wearing a function. `--cf-text-4xl` (44px) below 60rem and
+ * `--cf-text-5xl` (60px) above it says the same thing in the scale's own vocabulary, and both
+ * ends follow the design system if it ever re-tunes them.
+ *
+ * `--cf-text-5xl` is annotated "the editorial size, `site` only" in tokens.css. That was a note
+ * about where it happened to be used, not a reservation, and this is the one editorial statement
+ * this bundle makes.
+ */
+.mk-hero__title {
+  margin: 0;
+  max-width: 18ch;
+  font-family: var(--cf-font-display);
+  font-stretch: 80%;
+  font-weight: 600;
+  font-size: var(--cf-text-4xl);
+  line-height: 0.98;
+  letter-spacing: -0.02em;
+  color: var(--cf-fg);
+}
+
+@media (min-width: 60rem) {
+  .mk-hero__title {
+    font-size: var(--cf-text-5xl);
+  }
+}
+
+.mk-hero__cta {
+  flex: 0 0 auto;
+}
+
+/*
+ * The escrow run as a track: one hairline across the three beats, notched by the ordinal.
+ *
+ * The number sits ON the rule with the page ground painted behind it, so the rule reads as the
+ * sequence and the numerals as points on it. That is the whole reason the ordinals are allowed
+ * here at all — see the file header on browse.tsx. They are not labels, they are positions.
+ */
+.mk-run {
+  list-style: none;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 1.5rem;
+}
+
+.mk-run__beat {
+  position: relative;
+  border-top: 1px solid var(--cf-line-strong);
+  padding-top: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.mk-run__ord {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: translateY(-55%);
+  padding-right: 0.55rem;
+  background: var(--cf-bg);
+  color: var(--cf-accent);
+  font-family: var(--cf-font-mono);
+  font-size: var(--cf-text-sm);
+  font-weight: 500;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.mk-run__step {
+  color: var(--cf-fg);
+  font-size: var(--cf-text-md);
+  font-weight: 600;
+}
+
+.mk-run__line {
+  color: var(--cf-fg-dim);
+  font-size: var(--cf-text-sm);
+  line-height: 1.5;
+}
+
+.mk-hero__note {
+  margin: 0;
+  max-width: 52ch;
+  color: var(--cf-fg-mute);
+  font-size: var(--cf-text-sm);
+  line-height: 1.6;
+}
+
+@media (max-width: 52rem) {
+  .mk-run {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.1rem;
+  }
+}
+
+/* ------------------------------ toolbar ---------------------------- *
+ * `.mk-filters` WAS HERE: a flex row of three `.mk-field` stacks, each a label above a control,
+ * two of them `<select>`s. Deleted rather than restyled. Two of the three choices are now the
+ * `.mk-kinds` pill row — the taxonomy of what can be sold here is worth reading on a front door,
+ * and a closed menu hid it — and the labels went with them, because "Narrow what is below" above a
+ * search box with a placeholder was the same sentence twice. Both survive for screen readers as
+ * `.cf-sr` text; sighted readers get the row of choices instead.
+ * ------------------------------------------------------------------- */
+
+.mk-bar {
+  display: grid;
+  grid-template-columns: minmax(10rem, 20rem) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 0;
+  border-top: 1px solid var(--cf-line);
+  border-bottom: 1px solid var(--cf-line);
   margin-bottom: 1rem;
+}
+
+.mk-bar__search,
+.mk-bar__sort {
+  display: block;
+  min-width: 0;
+}
+
+.mk-bar__sort .cf-input {
+  width: auto;
+}
+
+@media (max-width: 60rem) {
+  .mk-bar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mk-bar__sort .cf-input {
+    width: 100%;
+  }
+}
+
+.mk-kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.mk-kind {
+  appearance: none;
+  border: 1px solid var(--cf-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--cf-fg-mute);
+  font-family: inherit;
+  font-size: var(--cf-text-sm);
+  line-height: 1.2;
+  padding: 0.35rem 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mk-kind:hover {
+  border-color: var(--cf-line-strong);
+  color: var(--cf-fg-dim);
+}
+
+.mk-kind:focus-visible {
+  outline: 2px solid var(--cf-accent);
+  outline-offset: 2px;
+}
+
+.mk-kind.is-on {
+  border-color: var(--cf-accent);
+  background: color-mix(in srgb, var(--cf-accent) 14%, transparent);
+  color: var(--cf-fg);
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mk-kind {
+    transition:
+      border-color 120ms ease,
+      color 120ms ease,
+      background-color 120ms ease;
+  }
 }
 
 .mk-form {
@@ -380,6 +613,194 @@ body {
 
 .mk-card__clock {
   color: var(--cf-fg-dim);
+}
+
+/* -------------------------- lots (browse) -------------------------- *
+ * Browse's own card, beside `.mk-card` rather than replacing it: `.mk-card` is still what
+ * `collections.tsx` renders, and a collection tile genuinely has a title and a description to set,
+ * which is the thing a listing does not have.
+ *
+ * `ListingView` carries no name at all — `src/lib/market.ts` — so the item's URN is the headline
+ * here, split at its colons into the levels it already describes. Everything else on the card is
+ * kept deliberately quiet so that split is the only thing the eye is asked to notice.
+ * ------------------------------------------------------------------- */
+
+.mk-lots {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18.5rem, 1fr));
+  gap: 0.75rem;
+}
+
+.mk-lot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  background: var(--cf-surface-solid);
+  border: 1px solid var(--cf-line);
+  border-radius: var(--cf-radius-lg);
+  padding: 1rem 1.1rem 0.9rem;
+}
+
+.mk-lot:hover {
+  border-color: var(--cf-line-strong);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mk-lot {
+    transition: border-color 140ms ease;
+  }
+}
+
+.mk-lot__link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.mk-lot__link:focus-visible {
+  outline: 2px solid var(--cf-accent);
+  outline-offset: 4px;
+  border-radius: var(--cf-radius-sm);
+}
+
+.mk-lot__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid var(--cf-line);
+}
+
+.mk-lot__kind {
+  font-size: var(--cf-text-2xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cf-fg-mute);
+}
+
+/* The asset a sale settles in, which is the first thing a buyer checks and the one fact on the
+   card their wallet has to be able to honour. Mono, because it is a code and not a word. */
+.mk-lot__asset {
+  font-family: var(--cf-font-mono);
+  font-size: var(--cf-text-2xs);
+  letter-spacing: 0.06em;
+  color: var(--cf-fg-dim);
+  white-space: nowrap;
+}
+
+/* Holds the screen-reader copy of the address and the set copy. The `.cf-sr` child is taken out of
+   flow by its own rule, so this box is the height of the visible setting alone. */
+.mk-lot__urn {
+  display: block;
+  min-width: 0;
+}
+
+.mk-lot__set {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.mk-lot__trail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.35rem;
+  font-family: var(--cf-font-mono);
+  font-size: var(--cf-text-2xs);
+  line-height: 1.35;
+  color: var(--cf-fg-mute);
+  min-width: 0;
+}
+
+/* The separator is drawn rather than typed. Generated content is not selectable and not copied,
+   which is what makes a dragged selection of this trail paste as the segments and not as a string
+   of interpuncts — and the address a reader actually wants whole is the `.cf-sr` copy above it. */
+.mk-lot__seg {
+  overflow-wrap: anywhere;
+}
+
+.mk-lot__seg:not(:last-child)::after {
+  content: '·';
+  margin-left: 0.35rem;
+  color: var(--cf-line-strong);
+}
+
+/*
+ * THE SIGNATURE. The last level of the URN — the item itself — set in the display face.
+ *
+ * `overflow-wrap: anywhere` and not `word-break: break-all`: a slug like `species-sheet-v1` breaks
+ * at its own hyphens and only splits mid-word when there is no other way, whereas `break-all`
+ * would chop it wherever the box ended and lose the word shape that makes it readable at all.
+ */
+.mk-lot__leaf {
+  font-family: var(--cf-font-display);
+  font-stretch: 88%;
+  font-weight: 600;
+  font-size: var(--cf-text-xl);
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  color: var(--cf-fg);
+  overflow-wrap: anywhere;
+}
+
+.mk-lot__link:hover .mk-lot__leaf {
+  color: var(--cf-accent);
+}
+
+.mk-lot__tags {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+/*
+ * The plate: label and figure on one baseline under a rule, the way an estimate is set in a
+ * catalogue. `margin-top: auto` pushes it to the floor of the card, so a row of lots of unequal
+ * height still has its prices on one line — which is the comparison a buyer is actually making.
+ */
+.mk-lot__plate {
+  margin-top: auto;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--cf-line-strong);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.mk-lot__plate-label {
+  font-size: var(--cf-text-2xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cf-fg-mute);
+  white-space: nowrap;
+}
+
+.mk-lot__plate-value {
+  font-size: var(--cf-text-lg);
+  color: var(--cf-fg);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.mk-lot__clock,
+.mk-lot__stamp {
+  margin: 0;
+  font-size: var(--cf-text-xs);
+  color: var(--cf-fg-mute);
+}
+
+.mk-lot__clock {
+  color: var(--cf-fg-dim);
+  line-height: 1.45;
 }
 
 /* ------------------------------- rows ------------------------------ */

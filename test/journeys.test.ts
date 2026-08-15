@@ -162,17 +162,36 @@ describe('BJ-MKT — Forge Market', () => {
         // The Kind filter is one of the four the route reads, so changing it asks the route
         // again rather than re-slicing what is already here. A control that looks like it filters
         // and does not is worse than no control.
-        const kind = s.allByRole('combobox')[0]
-        assert.ok(kind, 'the Kind filter is gone')
-        await s.type(kind, 'game_item')
+        //
+        // IT IS A ROW OF RADIOS NOW, NOT A `<select>`, and this assertion was rewritten to drive
+        // the control that exists rather than the one it was written against. The PROPERTY is
+        // untouched — pick a kind, a request goes out carrying `assetKind` — and only the gesture
+        // moved, because `browse.tsx` traded the closed menu for a visible row: on a marketplace
+        // front door the list of things that CAN be sold here is worth reading, and seven options
+        // behind a click is a taxonomy nobody sees. Driving it by role rather than by tag is also
+        // what keeps this honest: `role="radio"` with `aria-checked` is the claim the markup makes
+        // to a screen reader, so a pill row that forgot either fails here.
+        const kinds = s.allByRole('radio')
+        assert.ok(kinds.length >= 2, 'the Kind filter is gone')
+        const gameItem = kinds.find((el) => (el.textContent ?? '').trim() === 'Game item')
+        assert.ok(gameItem, 'the Kind row offers no Game item')
+        assert.equal(gameItem.getAttribute('aria-checked'), 'false', 'Game item starts chosen')
+        await s.click(gameItem)
         const asked = s.api.matching('GET /v1/listings')
         assert.equal(
           asked.length,
           2,
-          'changing the Kind filter issued no request — the select re-rendered the page and ' +
-            'nothing was re-asked',
+          'choosing a Kind issued no request — the row re-rendered the page and nothing was ' +
+            're-asked',
         )
         assert.match(asked[1]?.path ?? '', /assetKind=game_item/)
+        assert.equal(
+          s.allByRole('radio').find((el) => (el.textContent ?? '').trim() === 'Game item')
+            ?.getAttribute('aria-checked'),
+          'true',
+          'the chosen kind does not report itself chosen, so a screen reader cannot tell which ' +
+            'of the seven is on',
+        )
 
         s.clean('BJ-MKT-01')
       },
