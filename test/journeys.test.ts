@@ -26,6 +26,7 @@
  * blocked ones carry their blocker, and the last describe block asserts the two agree.
  */
 import assert from 'node:assert/strict'
+import { BASE } from '../src/lib/routes.ts'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
@@ -49,7 +50,7 @@ import { ListingPage } from '../src/pages/listing.tsx'
 import { OrdersPage } from '../src/pages/orders.tsx'
 import { SellPage } from '../src/pages/sell.tsx'
 
-const ORIGIN = 'https://market.cloudsforge.online'
+const ORIGIN = 'https://cloudsforge.online/market'
 const at = (p: string) => fileURLToPath(new URL(`../${p}`, import.meta.url))
 
 /** A page under a router at `path`, with the session context every page may reach for. */
@@ -1195,7 +1196,7 @@ describe('BJ-MARKET-404 — an unowned address answers 404', () => {
   it('BJ-MARKET-404 T2: nginx serves the shell through error_page 404, never try_files', () => {
     assert.match(
       directives,
-      /error_page\s+404\s+\/index\.html/,
+      new RegExp(`error_page\\s+404\\s+${BASE}/index\\.html`),
       'the SPA fallback must keep the 404 status',
     )
     assert.doesNotMatch(

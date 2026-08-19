@@ -16,13 +16,16 @@
  * normalises its argument against the hostname's own network.
  */
 import assert from 'node:assert/strict'
+import { BASE } from '../src/lib/routes.ts'
 import { afterEach, describe, it } from 'node:test'
 import { installWindow, removeWindow } from './browser-stubs.ts'
 import { apiBase } from '../src/lib/hosts.ts'
 import { setViewedNetwork, viewedNetwork } from '../src/lib/viewed.ts'
 
 /** A real address on this surface, on the mainnet estate. */
-const PAGE = 'https://market.cloudsforge.online/'
+// The page is at `<apex>/market` since wave 3. `market.cloudsforge.online` is a 301 now and the
+// registry cannot read an environment out of it, so a fixture there would default to mainnet.
+const PAGE = 'https://cloudsforge.online/market'
 /** A development address: no sibling estate exists, so nothing here can point anywhere. */
 const DEV = 'http://localhost:5173/'
 
@@ -42,7 +45,14 @@ describe('the in-place network view', () => {
   it('starts on the network the hostname names, and says so', () => {
     at(PAGE, () => {
       assert.equal(viewedNetwork(), 'mainnet')
-      assert.equal(apiBase(), '')
+      // ── `''` WAS THE ANSWER UNTIL WAVE 3, AND IT IS THE DEFECT THIS SURFACE MOVED INTO ────────
+      //
+      // Same-network reads stay RELATIVE, which is still true — but relative to the MOUNT, not to
+      // the origin. `''` means the bundle issues `/v1/listings` from a page at `/market/anything`,
+      // and that resolves at the apex ROOT, which is micro-site's. micro-site answers its SPA
+      // shell: 200, an HTML body where JSON was expected, every panel in a failure state and a
+      // completely healthy network tab.
+      assert.equal(apiBase(), BASE)
     })
   })
 
@@ -53,7 +63,10 @@ describe('the in-place network view', () => {
       // `-testnet` on the API host, not a different path and not a different product. The web
       // hostname is retired and 302s to its mainnet sibling; `/v1` on it is exempt and still
       // answers from the testnet service, which is what makes this readable at all.
-      assert.equal(apiBase(), 'https://market-testnet.cloudsforge.online')
+      // The testnet ESTATE, with the mount carried through: `viewedHosts()` re-points the origin
+      // and leaves the path alone, and the testnet gateway strips `/market` exactly as the mainnet
+      // one does. Dropping it here would be the dev-only rule applied where a gateway exists.
+      assert.equal(apiBase(), 'https://testnet.cloudsforge.online/market')
     })
   })
 
@@ -62,7 +75,14 @@ describe('the in-place network view', () => {
       setViewedNetwork('testnet')
       setViewedNetwork('mainnet')
       assert.equal(viewedNetwork(), 'mainnet')
-      assert.equal(apiBase(), '')
+      // ── `''` WAS THE ANSWER UNTIL WAVE 3, AND IT IS THE DEFECT THIS SURFACE MOVED INTO ────────
+      //
+      // Same-network reads stay RELATIVE, which is still true — but relative to the MOUNT, not to
+      // the origin. `''` means the bundle issues `/v1/listings` from a page at `/market/anything`,
+      // and that resolves at the apex ROOT, which is micro-site's. micro-site answers its SPA
+      // shell: 200, an HTML body where JSON was expected, every panel in a failure state and a
+      // completely healthy network tab.
+      assert.equal(apiBase(), BASE)
     })
   })
 

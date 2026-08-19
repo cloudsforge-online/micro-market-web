@@ -23,6 +23,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { ScrollToTop } from './components/scroll-to-top.tsx'
 import { AppShell } from './components/shell.tsx'
 import { AuthProvider, ProtectedRoute } from './lib/auth.tsx'
+import { BASE } from './lib/routes.ts'
 import { BrowsePage } from './pages/browse.tsx'
 import { CollectionsPage } from './pages/collections.tsx'
 import { FeesPage } from './pages/fees.tsx'
@@ -33,7 +34,7 @@ import { SellPage } from './pages/sell.tsx'
 
 export function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={BASE}>
       <ScrollToTop />
       <AuthProvider>
         <Routes>

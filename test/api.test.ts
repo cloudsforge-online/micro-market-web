@@ -248,7 +248,7 @@ describe('auth callback', () => {
   })
 
   it('redeems at the route identity serves, on identity’s host', async () => {
-    browser = installWindow('https://market.cloudsforge.online/#cf_code=abc123')
+    browser = installWindow('https://cloudsforge.online/market#cf_code=abc123')
     stub = installFetch(identityRedemption, browser.trace)
 
     assert.equal(await bootstrapSession(), true, 'the redemption was refused')

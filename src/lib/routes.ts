@@ -17,6 +17,34 @@
  * does not have to boot a browser to find out what the routes are.
  */
 
+/**
+ * ── WHERE THIS BUNDLE IS MOUNTED, AND WHY THE TWO KINDS OF PATH BELOW ARE NOT THE SAME KIND ──────
+ *
+ * Forge Market used to be a hostname. It is now a FOLDER on the apex: `/market`, wave 3 of the
+ * consolidation argued in micro-deploy `docs/apex-consolidation.md`. The registry says the same
+ * thing in one line — `subdomain: ''`, `basePath: '/market'`.
+ *
+ *   A ROUTER PATH is what `react-router` matches, relative to the mount. `/listings/:id`. Every
+ *     `<Link to>`, `<Route path>`, and the navigation derived from `ROUTES` below. `basename` in
+ *     `src/app.tsx` puts the prefix back, so a router path that already carries it renders
+ *     `/market/market/listings`.
+ *
+ *   A PUBLIC PATH is what a reader's address bar shows and what a crawler is handed.
+ *     `/market/listings/:id`. Every `<loc>` in the sitemap and every `location` in `nginx.conf`.
+ *
+ * `publicPath()` is the one crossing, and the only place `BASE` is concatenated.
+ *
+ * THE API IS A THIRD THING AND IT IS NOT HERE. `micro-market` answers `/v1`, this bundle asks for
+ * it relatively, and a relative `/v1` from `/market/anything` resolves at the APEX ROOT. That is
+ * `apiBaseFor()` in `lib/hosts.ts`, not a route — see its comment.
+ */
+export const BASE = '/market'
+
+/** A router path as a public one. No trailing slash: the index is `/market`, not `/market/`. */
+export function publicPath(path: string): string {
+  return path === '/' ? BASE : `${BASE}${path}`
+}
+
 export interface MarketRoute {
   /** The top-level path segment, without a leading slash. `''` is the index route. */
   readonly path: string

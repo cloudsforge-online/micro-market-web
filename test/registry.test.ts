@@ -77,7 +77,14 @@ test('market is in the switcher, which is what makes the bar mark it current', (
   const market = SURFACES.find((s) => s.key === 'market')
   assert.ok(market)
   assert.equal(market.inSwitcher, true)
-  assert.equal(market.subdomain, 'market')
+  // ── IT IS A PATH ON THE APEX SINCE WAVE 3, AND THE SWITCHER STILL FINDS IT ────────────────────
+  //
+  // `subdomain: 'market'` was the assertion, and what it was FOR is that the switcher can navigate
+  // here — micro-ui's own `surfaces.test.ts` had the same assertion under the name "holds no
+  // surface that is in the switcher and has no home", and it was rewritten in wave 2 for the same
+  // reason: a home is an address, and either half of (subdomain, basePath) supplies one.
+  assert.equal(market.subdomain, '')
+  assert.equal(market.basePath, '/market')
 })
 
 /**

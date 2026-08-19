@@ -171,7 +171,7 @@ jobs:
           set -uo pipefail
           directives=$(grep -v '^[[:space:]]*#' nginx.conf)
           if printf '%s\n' "$directives" | grep -nE 'try_files[[:space:]]+\$uri[[:space:]]+(\$uri/[[:space:]]+)?/index\.html'; then
-            echo "::error::unknown paths must 404; serve the shell through error_page 404 /index.html"
+            echo "::error::unknown paths must 404; serve the shell through error_page 404 /market/index.html"
             exit 1
           fi
           # `grep -q PATTERN <<<"$var"` rather than `printf '%s\n' "$var" | grep -q PATTERN`.
@@ -179,7 +179,18 @@ jobs:
           # and `pipefail` promoted that SIGPIPE (exit 141) to a failed step — a gate that failed for
           # no reason and passed on re-run, which teaches re-running instead of reading. The here-string
           # is byte-identical input with the same exit status and no pipe, so the rule is unchanged.
-          grep -q 'error_page 404 /index.html' <<<"$directives"
+          # THE MOUNT IS PART OF THE PATH NOW. The bundle is served from
+          # `/usr/share/nginx/html/market`, so the internal redirect that serves the shell is
+          # `/market/index.html`; `/index.html` is not a file this image has. Wave 3a of
+          # `deploy/docs/apex-consolidation.md`, and micro-journal-web and micro-exchange-web both
+          # made the same edit to this same gate in waves 1 and 2.
+          #
+          # Still a literal rather than something derived from `src/lib/routes.ts`: this step is a
+          # shell gate with no TypeScript in reach, and the agreement between the mount's five
+          # spellings — registry, routes.ts, vite.config.ts, nginx.conf, gateway — is asserted by
+          # `check-base-paths-agree.py` in micro-deploy, which reads all five. This line only has
+          # to stop a `try_files` fallback sneaking back in.
+          grep -q 'error_page 404 /market/index.html' <<<"$directives"
           echo "ok: unknown paths answer 404"
 
       - name: The auth callback is redeemed before the app renders
@@ -357,28 +368,60 @@ jobs:
         run: |
           set -euo pipefail
           docker run -d --name ci-market-web -p 127.0.0.1:55630:8080 market-web:ci
+
+          # ── EVERY PROBE BELOW CARRIES THE MOUNT, AND ONE VARIABLE IS WHY ─────────────────────
+          #
+          # The market is `<apex>/market` since 2026-08-19 (micro-deploy
+          # `docs/apex-consolidation.md`, wave 3a) and this step was written when it was a
+          # hostname. `BASE` is prepended to each probe rather than written into it, so the
+          # addresses read as ROUTER paths — the way `src/lib/routes.ts` holds them — and there is
+          # one line to change if the mount moves. micro-exchange-web's CI took the same shape in
+          # wave 2.
+          BASE=/market
+
           for attempt in $(seq 1 20); do
-            code=$(curl -s -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:55630/ || true)
+            code=$(curl -s -m 5 -o /dev/null -w '%{http_code}' "http://127.0.0.1:55630$BASE" || true)
             [ "$code" = "200" ] && break
             sleep 1
           done
-          [ "${code:-}" = "200" ] || { echo "::error::the image returned ${code:-no answer} for /"; docker logs --tail 60 ci-market-web; exit 1; }
+          [ "${code:-}" = "200" ] || { echo "::error::the image returned ${code:-no answer} for $BASE"; docker logs --tail 60 ci-market-web; exit 1; }
+
+          # THE TRAILING SLASH IS A SECOND FRONT DOOR, and it did not exist while this was a
+          # hostname: `/` has no slash-suffixed variant to get wrong, `/market` does. A reader who
+          # types the folder with a slash — or any tool that normalises a directory-looking URL by
+          # adding one — arrives here, and `location = /market/` in nginx.conf exists for it.
+          slash=$(curl -s -m 5 -o /dev/null -w '%{http_code}' "http://127.0.0.1:55630$BASE/" || true)
+          [ "$slash" = "200" ] || { echo "::error::$BASE/ returned $slash — the trailing-slash front door is not served"; exit 1; }
+
+          # AND THE ORIGIN ROOT IS NOT THIS IMAGE'S ANY MORE. `/` belongs to micro-site; this
+          # container answering it would be invisible behind the gateway, which routes only
+          # `/market` here — and very visible under `docker run`, which is where a wrong `base:` in
+          # vite.config.ts or a wrong COPY destination in the Dockerfile shows up first. 404 is the
+          # assertion that the bundle actually moved rather than being served from both places.
+          root=$(curl -s -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:55630/ || true)
+          [ "$root" = "404" ] || { echo "::error::the origin root returned $root — this image must not serve /, which is micro-site's"; exit 1; }
+
+          # Same for robots.txt, and it is not pedantry: a crawler reads robots.txt at the ORIGIN
+          # ROOT only, so a copy served here would be a file nothing fetches while looking like the
+          # rules are covered. micro-site owns them now and asserts them.
+          robots=$(curl -s -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:55630/robots.txt || true)
+          [ "$robots" = "404" ] || { echo "::error::/robots.txt returned $robots — this image deleted its copy; micro-site owns the origin root"; exit 1; }
 
           # A route this app OWNS must survive a hard refresh. A listing page is the address people
           # paste at each other, so it is the one worth proving.
-          deep=$(curl -s -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:55630/listings/11111111-2222-3333-4444-555555555555 || true)
+          deep=$(curl -s -m 5 -o /dev/null -w '%{http_code}' "http://127.0.0.1:55630$BASE/listings/11111111-2222-3333-4444-555555555555" || true)
           [ "$deep" = "200" ] || { echo "::error::a listing deep link returned $deep — an owned route must be served the shell"; exit 1; }
 
-          order=$(curl -s -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:55630/orders/11111111-2222-3333-4444-555555555555 || true)
+          order=$(curl -s -m 5 -o /dev/null -w '%{http_code}' "http://127.0.0.1:55630$BASE/orders/11111111-2222-3333-4444-555555555555" || true)
           [ "$order" = "200" ] || { echo "::error::an order deep link returned $order"; exit 1; }
 
-          fees=$(curl -s -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:55630/fees || true)
+          fees=$(curl -s -m 5 -o /dev/null -w '%{http_code}' "http://127.0.0.1:55630$BASE/fees" || true)
           [ "$fees" = "200" ] || { echo "::error::/fees returned $fees"; exit 1; }
 
           # A route it does NOT own must answer 404 while still serving the shell, so the reader
           # gets a real page and the status line tells the truth. This is the assertion the org's
           # reusable image job cannot make, because it requires a 200 for any deep link.
-          unknown=$(curl -s -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:55630/nope/not/a/route || true)
+          unknown=$(curl -s -m 5 -o /dev/null -w '%{http_code}' "http://127.0.0.1:55630$BASE/nope/not/a/route" || true)
           [ "$unknown" = "404" ] || { echo "::error::an unknown address returned $unknown; it must be 404"; exit 1; }
           # NOT A PIPE INTO `grep -q` — the hazard this file already avoids with here-strings
           # elsewhere, on the one check that still had it. grep -q exits at its first match and
@@ -391,14 +434,14 @@ jobs:
           # micro-hub-web#16 then failed here twice in a row with the build green in the same run.
           # Measured 2026-08-10 — micro-org#347. Capturing first leaves no pipe to close early, and
           # `case` is an exact glob rather than a regex.
-          shell_404=$(curl -s -m 5 http://127.0.0.1:55630/nope/not/a/route || true)
+          shell_404=$(curl -s -m 5 "http://127.0.0.1:55630$BASE/nope/not/a/route" || true)
           case "$shell_404" in
             *'<div id="root">'*) ;;
             *) echo "::error::the 404 did not serve the app shell"; exit 1 ;;
           esac
 
           # A missing asset must 404 on its own terms rather than being answered with HTML.
-          asset=$(curl -s -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:55630/assets/does-not-exist.js || true)
+          asset=$(curl -s -m 5 -o /dev/null -w '%{http_code}' "http://127.0.0.1:55630$BASE/assets/does-not-exist.js" || true)
           [ "$asset" = "404" ] || { echo "::error::a missing asset returned $asset"; exit 1; }
 
           # The image must carry no environment file.
@@ -420,13 +463,16 @@ jobs:
         # probing a running container is the only way this class of defect has ever been found here.
         run: |
           set -euo pipefail
+          # The mount, for the reason the step above states at length. Prepended inside `probe`
+          # rather than written into the list, so the paths below stay ROUTER paths.
+          BASE=/market
           probe() {
             path="$1"; header="$2"
             value=$(curl -s -m 5 -D - -o /dev/null "http://127.0.0.1:55630${path}" | grep -i "^${header}:" || true)
             [ -n "$value" ] || { echo "::error::${path} is missing ${header}"; exit 1; }
             printf '  %s -> %s' "$path" "$value"
           }
-          for path in / /fees /listings/11111111-2222-3333-4444-555555555555 /nope/not/a/route; do
+          for path in "$BASE" "$BASE/fees" "$BASE/listings/11111111-2222-3333-4444-555555555555" "$BASE/nope/not/a/route"; do
             probe "$path" 'X-Content-Type-Options'
             probe "$path" 'X-Frame-Options'
             probe "$path" 'Referrer-Policy'
@@ -436,7 +482,12 @@ jobs:
           # `|| true`: `grep … | head -1` closes the pipe at the first line, so the producer takes
           # SIGPIPE and `pipefail` hands that to this assignment under `set -e` — the same broken
           # pipe as above, in the same step. The emptiness check below is what decides. micro-org#347.
-          asset=$(curl -s -m 5 http://127.0.0.1:55630/ | grep -o '/assets/[^"]*\.js' | head -1 || true)
+          # `$BASE` on the fetch, but the PATTERN stays `/assets/` and the captured path is passed to
+          # `probe` unprefixed — because vite's `base: '/market/'` already rewrote the src in the
+          # shell to `/market/assets/…`. Prefixing it again here would probe `/market/market/assets`
+          # and fail on an image that is correct. This is the one place in the file where not
+          # adding the mount is the deliberate choice.
+          asset=$(curl -s -m 5 "http://127.0.0.1:55630$BASE" | grep -o '/market/assets/[^"]*\.js' | head -1 || true)
           [ -n "$asset" ] || { echo "::error::the shell names no hashed script"; exit 1; }
           probe "$asset" 'X-Content-Type-Options'
           probe "$asset" 'Cache-Control'
