@@ -47,9 +47,24 @@ describe('resolveApiBase', () => {
     assert.equal(resolveApiBase('', hosts, 'market'), 'http://localhost:4007')
   })
 
-  it('compares ORIGINS, so a surface with a base path still looks like itself', () => {
+  it('answers a base-path surface with its MOUNT, because `` would leave the mount', () => {
+    // ── THIS ASSERTION USED TO EXPECT `''`, AND THAT WAS THE DEFECT WRITTEN DOWN ────────────────
+    //
+    // It was named "compares ORIGINS, so a surface with a base path still looks like itself", and
+    // the origin comparison is right — a surface with a base path IS same-origin with itself, and
+    // the absolute form would be wrong. What was wrong is what same-origin then answers.
+    //
+    // `''` means every request stays RELATIVE. From a page at `/app/anything` a relative
+    // `/v1/titles` resolves to `/v1/titles` at the ORIGIN ROOT — outside the mount entirely. On
+    // this estate that root belongs to micro-site, which answers its SPA shell for an unknown
+    // path: 200, an HTML body where JSON was expected, every panel on the page in a failure state
+    // and a completely healthy network tab.
+    //
+    // The mount is the answer. Asserted here as well as in `@cloudsforge/ui`'s own suite because
+    // this is the seam this repository actually calls, and a delegation that stopped delegating
+    // would pass every test in the other repository.
     const withPath = { market: 'https://market.example/app' } as unknown as CloudsForgeHosts
-    assert.equal(resolveApiBase('https://market.example', withPath, 'market'), '')
+    assert.equal(resolveApiBase('https://market.example', withPath, 'market'), '/app')
   })
 
   it('does not treat a different port on the same host as the same origin', () => {
@@ -61,8 +76,16 @@ describe('resolveApiBase', () => {
 })
 
 describe('the registry resolves this app at runtime', () => {
-  it('gives market its own dev port on localhost', () => {
-    assert.equal(hostsFor('http://localhost:5187/').market, 'http://localhost:4007')
+  it('gives market its own dev port on localhost, with the mount appended', () => {
+    // `hostsFrom` composes every entry as origin + `basePath ?? ''`, so a path-mounted surface's
+    // base URL carries the mount in EVERY environment — that is what makes one registry edit
+    // re-point every link in the estate.
+    //
+    // In development it produces an address that is a LINK target and not an API base, and those
+    // two now differ: `devPort` names the SERVICE (4007 is `micro-market`), the mount only exists
+    // where a gateway puts it, and `apiBaseFor` drops it for a local target precisely because
+    // nothing strips it there. See its comment in @cloudsforge/ui.
+    assert.equal(hostsFor('http://localhost:5187/').market, 'http://localhost:4007/market')
   })
 
   it('gives market a subdomain on a real apex', () => {

@@ -17,6 +17,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { describe, it } from 'node:test'
 import {
+  BASE,
   NAV,
   NON_INDEX_PATHS,
   ROUTES,
@@ -44,7 +45,11 @@ const directives = nginx
 
 /** The alternation inside nginx's enumerated `location ~ ^/(…)` block. */
 function nginxPaths(): string[] {
-  const match = /location\s+~\s+\^\/\(([^)]+)\)/.exec(directives)
+  // ANCHORED ON THE MOUNT. `^/(` matched `location ~ ^/(listings|…)` and matches nothing now
+  // that the block is `^/market/(listings|…)`. An unanchored read here returns null and the
+  // caller reports 'no enumerated route block' — loud, which is the good half of this class of
+  // failure; the wave-2 version of the same reader went SILENT instead.
+  const match = new RegExp(`location\\s+~\\s+\\^${BASE}/\\(([^)]+)\\)`).exec(directives)
   assert.ok(match, 'nginx.conf has no enumerated route block')
   return (match[1] ?? '').split('|').map((p) => p.trim())
 }
@@ -172,7 +177,10 @@ describe('nginx', () => {
   })
 
   it('serves the index explicitly', () => {
-    assert.match(nginx, /location\s+=\s+\/\s*\{/)
+    // The front door is `location = /market` now, and `location = /market/` is a SECOND address
+    // that did not exist while this surface was a hostname — `/` has no slash-suffixed variant.
+    assert.match(nginx, new RegExp(`location\\s*=\\s*${BASE}\\s*\\{`))
+    assert.match(nginx, new RegExp(`location\\s*=\\s*${BASE}/\\s*\\{`))
   })
 
   it('never falls back to index.html with a 200 for an unknown path', () => {
@@ -181,7 +189,7 @@ describe('nginx', () => {
       false,
       'the catch-all falls back to the shell with a 200',
     )
-    assert.ok(directives.includes('error_page 404 /index.html'))
+    assert.ok(directives.includes(`error_page 404 ${BASE}/index.html`))
     // …and the comment that explains the rule is still there, since it is the only reason anybody
     // reading this file later will understand why the routes are enumerated by hand.
     assert.match(nginx, /404, not 200/)
@@ -189,7 +197,10 @@ describe('nginx', () => {
 
   it('does not let a missing asset fall through to the shell', () => {
     // A JavaScript request answered with HTML fails with a syntax error naming the wrong file.
-    assert.match(directives, /location\s+\/assets\/\s*\{[\s\S]*?try_files\s+\$uri\s+=404;/)
+    assert.match(
+      directives,
+      new RegExp(`location\\s+${BASE}/assets/\\s*\\{[\\s\\S]*?try_files\\s+\\$uri\\s+=404;`),
+    )
   })
 
   it('restates the security headers in every block that sets Cache-Control', () => {
@@ -221,7 +232,10 @@ describe('nginx', () => {
   })
 
   it('never caches the shell, which is the file that names the hashed bundle', () => {
-    assert.match(directives, /location\s+=\s+\/\s*\{[\s\S]*?Cache-Control\s+"no-store"/)
+    assert.match(
+      directives,
+      new RegExp(`location\\s*=\\s*${BASE}\\s*\\{[\\s\\S]*?Cache-Control\\s+"no-store"`),
+    )
   })
 })
 

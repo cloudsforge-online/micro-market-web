@@ -1,3 +1,4 @@
+import { BASE } from '../src/lib/routes.ts'
 /**
  * A DOM, so that the tier-1 and tier-2 scenarios of `docs/ecosystem/22-browser-journeys.md` can be
  * written at all.
@@ -107,6 +108,14 @@ export interface Wire {
   readonly body: string | undefined
   /** The parsed JSON body, or undefined when there was not one. */
   readonly json: unknown
+  /**
+   * The path as the BROWSER sent it, mount and all — `/market/v1/listings`.
+   *
+   * `path` above has the mount removed, because that is what the SERVICE sees and what every
+   * scenario's route table is written against. This is the only place the difference is visible,
+   * and it exists so the difference can be asserted rather than assumed.
+   */
+  readonly mountedPath: string
 }
 
 /** One stubbed response. `status` defaults to 200 and the request id is always present. */
@@ -347,7 +356,14 @@ function tabbablesIn(doc: Document): Element[] {
 }
 
 export async function mount(element: ReactElement, options: MountOptions = {}): Promise<Screen> {
-  const url = options.url ?? 'https://market.cloudsforge.online/'
+  // ── THE PAGE IS AT `<apex>/market` SINCE 2026-08-19, AND THIS DEFAULT IS WHERE IT LANDS ────────
+  //
+  // Wave 3 of the apex consolidation moved this surface off its hostname. `market.cloudsforge.online`
+  // is no longer a name the registry can split — `KNOWN_SUBS` is derived from the subdomains in
+  // `SURFACES` and this surface no longer contributes one — so `cloudsforgeHosts()` would treat the
+  // whole name as the apex and compose every sibling one level too deep. That is the resolver
+  // correctly reporting that nothing is served there any more.
+  const url = options.url ?? 'https://cloudsforge.online/market'
   const win = new Window({ url })
   const doc = win.document as unknown as Document
 
@@ -423,10 +439,27 @@ export async function mount(element: ReactElement, options: MountOptions = {}): 
         json = undefined
       }
     }
+    // ── THE MOUNT IS STRIPPED HERE, AND `mountedPath` KEEPS WHAT WAS ACTUALLY SENT ──────────────
+    //
+    // Wave 3 moved this surface to `<apex>/market`, so `apiBaseFor()` answers `/market` and every
+    // request the app makes is now `/market/v1/…` rather than `/v1/…`. Roughly ninety scenarios
+    // key their route tables on `GET /v1/…`, and rewriting all of them would have said nothing
+    // except that a prefix exists.
+    //
+    // So `path` is what those tables have always matched — the SERVICE's own path, which is also
+    // exactly what `micro-market` receives, because the gateway's stripPrefix removes `/market`
+    // before it gets there (decision 4). The scenarios describe the service's API and they still
+    // describe it correctly.
+    //
+    // `mountedPath` is what the BROWSER asked for, kept so the one thing worth asserting about
+    // this change can be asserted: that the mount is on the wire at all. `api.test.ts` does that
+    // once, rather than ninety tables carrying a prefix none of them are about.
+    const fullPath = `${parsed.pathname}${parsed.search}`
     const call: Wire = {
       method,
       url: raw,
-      path: `${parsed.pathname}${parsed.search}`,
+      path: fullPath.startsWith(`${BASE}/`) ? fullPath.slice(BASE.length) : fullPath,
+      mountedPath: fullPath,
       headers,
       body,
       json,

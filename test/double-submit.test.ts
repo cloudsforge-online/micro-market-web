@@ -67,7 +67,7 @@ import { OrdersPage } from '../src/pages/orders.tsx'
 import { SellPage } from '../src/pages/sell.tsx'
 import { useSubmit } from '../src/lib/submit.ts'
 
-const ORIGIN = 'https://market.cloudsforge.online'
+const ORIGIN = 'https://cloudsforge.online/market'
 
 const page = (element: ReactElement, path: string): ReactElement =>
   h(MemoryRouter, { initialEntries: [path] }, h(AuthProvider, null, element) as ReactElement)

@@ -33,10 +33,10 @@
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  */
 import assert from 'node:assert/strict'
+import { BASE, publicPath } from '../src/lib/routes.ts'
 import { readFileSync } from 'node:fs'
 import { describe, it } from 'node:test'
 import { ENV_LABELS } from '@cloudsforge/ui'
-import { robotsTxt } from '@cloudsforge/ui/sitemap'
 import { ROUTES, SITEMAP_PATHS } from '../src/lib/routes.ts'
 
 const nginx = readFileSync(new URL('../nginx.conf', import.meta.url), 'utf8')
@@ -66,10 +66,20 @@ function servedBody(path: string): string {
 
 /** The address a route canonicalises to, in the form nginx composes it. */
 function address(path: string): string {
-  // The index is bare `$scheme://$host`, never `$scheme://$host/`. One page must not acquire two
-  // addresses and split its own indexing between them — the same normalisation `normalisePath` in
-  // @cloudsforge/ui/seo applies to the canonical link this app writes at runtime.
-  return path === '/' ? '$scheme://$host' : `$scheme://$host${path}`
+  // ── `https` IS A LITERAL AND THE MOUNT IS PART OF THE ADDRESS ──────────────────────────────────
+  //
+  // `$scheme` was a live defect: TLS ends at Cloudflare and every hop after it is plaintext, so
+  // `$scheme` is `http` for a reader who arrived over `https` and every `<loc>` advertised an
+  // address that 301s. Found in micro-site in wave 1 and in exchange-web in wave 2; this is the
+  // third copy. `$host` stays a variable because the host genuinely differs per request.
+  //
+  // And the surface is `<apex>/market` now, so a route's public address carries the mount —
+  // `publicPath()` in `src/lib/routes.ts` is the one crossing, and this mirrors it.
+  //
+  // The index is bare `https://$host/market`, never with a trailing slash. One page must not
+  // acquire two addresses and split its own indexing between them — the same normalisation
+  // `normalisePath` in @cloudsforge/ui/seo applies to the canonical this app writes at runtime.
+  return `https://$host${publicPath(path)}`
 }
 
 describe('the sitemap nginx serves', () => {
@@ -79,13 +89,13 @@ describe('the sitemap nginx serves', () => {
      * allowed at all. A single literal apex here would make the image wrong on a preview
      * deployment and on testnet, silently, in the one document a crawler treats as authoritative.
      */
-    const xml = servedBody('/sitemap.xml')
+    const xml = servedBody(`${BASE}/sitemap.xml`)
     assert.ok(!xml.includes(APEX), 'the sitemap names the production apex')
     assert.ok(!xml.includes('localhost'), 'the sitemap names localhost')
     const locs = [...xml.matchAll(/<loc>([^<]*)<\/loc>/g)].map((m) => m[1] ?? '')
     assert.ok(locs.length > 0, 'the sitemap has no <loc> at all')
     for (const loc of locs) {
-      assert.match(loc, /^\$scheme:\/\/\$host/, `a <loc> is not composed from $host: ${loc}`)
+      assert.match(loc, /^https:\/\/\$host/, `a <loc> is not composed from $host: ${loc}`)
     }
   })
 
@@ -93,7 +103,7 @@ describe('the sitemap nginx serves', () => {
     // `$scheme://foresight.$host` on THIS surface is `foresight.market.<apex>`: the two-label shape
     // that resolves nowhere and fails the edge's one-label wildcard certificate. The estate
     // sitemap is `site`'s, and this assertion is what stops somebody copying it here.
-    const xml = servedBody('/sitemap.xml')
+    const xml = servedBody(`${BASE}/sitemap.xml`)
     assert.ok(
       !/<loc>\$scheme:\/\/[a-z-]+\.\$host/.test(xml),
       'the sitemap prefixes a subdomain onto a host that already has one',
@@ -101,7 +111,7 @@ describe('the sitemap nginx serves', () => {
   })
 
   it('lists every public route, and nothing that is gated or unbounded', () => {
-    const xml = servedBody('/sitemap.xml')
+    const xml = servedBody(`${BASE}/sitemap.xml`)
     const locs = new Set([...xml.matchAll(/<loc>([^<]*)<\/loc>/g)].map((m) => m[1] ?? ''))
 
     for (const path of SITEMAP_PATHS) {
@@ -136,7 +146,9 @@ describe('the sitemap nginx serves', () => {
     // applies — a declaration that reads as a decision and is not one.
     assert.match(
       nginx,
-      /location = \/sitemap\.xml \{[\s\S]*?types \{ \}[\s\S]*?default_type application\/xml;/,
+      new RegExp(
+        `location = ${BASE}/sitemap\\.xml \\{[\\s\\S]*?types \\{ \\}[\\s\\S]*?default_type application/xml;`,
+      ),
     )
   })
 
@@ -144,7 +156,8 @@ describe('the sitemap nginx serves', () => {
     // A location declaring ANY add_header inherits NONE from the server level. Both of the blocks
     // added here declare Cache-Control, so both had to restate the other three or ship without
     // them — the exact defect `location /assets/` records having shipped once already.
-    for (const path of ['/sitemap.xml', '/robots.txt']) {
+    // `/robots.txt` left this list with the block that served it.
+    for (const path of [`${BASE}/sitemap.xml`]) {
       const block = new RegExp(`location = ${path.replace('.', '\\.')} \\{([\\s\\S]*?)\\n    \\}`)
         .exec(nginx)?.[1]
       assert.ok(block, `no exact-match location for ${path}`)
@@ -179,11 +192,17 @@ describe('an environment that is not mainnet', () => {
   })
 
   it('refuses every crawler and serves no sitemap', () => {
-    // Both halves matter and neither is sufficient: robots.txt stops the fetch, the 404 stops the
-    // document being there to fetch, and a page that is only disallowed can still be indexed from
-    // an inbound link.
-    assert.match(nginx, /if \(\$cf_env\) \{ return 200 'User-agent: \*\\nDisallow: \/\\n'; \}/)
-    assert.match(nginx, /location = \/sitemap\.xml \{[\s\S]*?if \(\$cf_env\) \{ return 404; \}/)
+    // ── THE robots.txt HALF IS micro-site's NOW, AND ONLY THE SITEMAP HALF IS STILL OURS ────────
+    //
+    // Both halves used to be here and both still matter: robots.txt stops the fetch, the 404 stops
+    // the document being there to fetch, and a page that is only disallowed can still be indexed
+    // from an inbound link. But a crawler reads robots.txt at the ORIGIN ROOT, so since this
+    // surface became `<apex>/market` its copy is a file nothing fetches. micro-site owns that half
+    // and asserts it; the sitemap half is asserted here because it is still this image's to serve.
+    assert.match(
+      nginx,
+      new RegExp(`location = ${BASE}/sitemap\\.xml \\{[\\s\\S]*?if \\(\\$cf_env\\) \\{ return 404; \\}`),
+    )
   })
 
   it('matches a suffixed subdomain as well as a bare environment apex', () => {
@@ -198,20 +217,7 @@ describe('an environment that is not mainnet', () => {
 })
 
 describe('robots.txt', () => {
-  it('is exactly what the design system generates', () => {
-    // Compared with its trailing newline intact: robots.txt is a line-oriented format, and a parser
-    // that reads the last line only when it is terminated silently loses the Sitemap directive.
-    assert.equal(
-      servedBody('/robots.txt'),
-      robotsTxt({ indexable: true, sitemapUrl: '$scheme://$host/sitemap.xml' }),
-    )
-  })
 
-  it('points at the sitemap with an absolute address, composed rather than typed', () => {
-    // A relative `Sitemap:` line is invalid per the standard and is ignored; a literal one bakes in
-    // a hostname. `$scheme://$host` is the only form that is both valid and environment-free.
-    assert.match(servedBody('/robots.txt'), /^Sitemap: \$scheme:\/\/\$host\/sitemap\.xml$/m)
-  })
 
   it('is not a static file, because an exact-match location would have shadowed it', () => {
     /*
