@@ -84,7 +84,19 @@
       property="og:description"
       content="Discover, list, offer and settle. Every price in its own asset, and every fee and royalty shown adding up to it exactly."
     />
-    <meta property="og:image" content="/og-1200x630.png" />
+    <!--
+      ── THE MOUNT IS IN THESE BY HAND, AND IT HAS TO BE ────────────────────────────────────────
+      vite rewrites `src` and `href` against `base` and does NOT touch `content`. So a
+      root-relative `content="/og-1200x630.png"` survived the build unchanged, and on the apex that
+      address belongs to MICRO-SITE — every shared link to this surface has been rendering the
+      company's card instead of the product's since this surface moved to `/market`. Silent, and
+      only ever visible in someone else's chat client.
+
+      `mountAsset()` in @cloudsforge/ui does the same composition at runtime for the head this app
+      applies; this is the copy a link-preview fetcher reads, and those generally do not execute
+      JavaScript — so it is the copy that decides what the card looks like.
+    -->
+    <meta property="og:image" content="/market/og-1200x630.png" />
     <meta name="twitter:card" content="summary_large_image" />
   </head>
   <body>
