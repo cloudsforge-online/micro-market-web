@@ -45,6 +45,22 @@ describe('utcTime / utcDate / utcDateTime', () => {
     // when it shuts, which is the one thing a close time exists to settle.
     assert.equal(utcTime(ISO), '09:22')
     assert.equal(utcDate(ISO), '01 Aug 2026')
+    // ── SEPTEMBER, WHICH `month: 'short'` SPELLS `Sept` IN en-GB ────────────────────────────
+    //
+    // Four characters where the other eleven months are three, so every listing date on this
+    // surface was a character wider for the whole of September. One fixed date per month, because
+    // the defect is in exactly one of the twelve and a single sample proves nothing about it.
+    const everyMonth: readonly (readonly [string, string])[] = [
+      ['2026-01-15', '15 Jan 2026'], ['2026-02-15', '15 Feb 2026'], ['2026-03-15', '15 Mar 2026'],
+      ['2026-04-15', '15 Apr 2026'], ['2026-05-15', '15 May 2026'], ['2026-06-15', '15 Jun 2026'],
+      ['2026-07-15', '15 Jul 2026'], ['2026-08-15', '15 Aug 2026'], ['2026-09-15', '15 Sep 2026'],
+      ['2026-10-15', '15 Oct 2026'], ['2026-11-15', '15 Nov 2026'], ['2026-12-15', '15 Dec 2026'],
+    ]
+    for (const [day, expected] of everyMonth) {
+      assert.equal(utcDate(`${day}T14:22:00.000Z`), expected)
+    }
+    const widths = new Set(everyMonth.map(([, expected]) => expected.length))
+    assert.equal(widths.size, 1, `dates render at ${[...widths].join(' and ')} characters`)
     assert.equal(utcDateTime(ISO), '01 Aug 2026, 09:22 UTC')
   })
 

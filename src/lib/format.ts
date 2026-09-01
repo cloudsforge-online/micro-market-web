@@ -37,16 +37,34 @@ export function utcTime(iso: string | null | undefined): string | null {
   })
 }
 
+/**
+ * The three-letter month names, written out rather than asked of the runtime.
+ *
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * **`month: 'short'` IS NOT THREE LETTERS IN en-GB, AND THE MONTH IT IS NOT IS SEPTEMBER.**
+ *
+ * `toLocaleDateString('en-GB', { month: 'short' })` returns `Sept` for September and three letters
+ * for every other month. CLDR's en-GB data, not a bug in any runtime — and every listing's close
+ * time and payout deadline on this surface goes through {@link utcDate}, in a column, beside
+ * prices that are aligned on the assumption the date beside them is a fixed width.
+ *
+ * The fix is not a different locale. `en-US` gives `Sep` today, which would make the format depend
+ * on the CLDR revision the runtime was built with and on whether it is a full-icu build at all — a
+ * small-icu Node falls back to `en-US` whatever is asked for, so the same bundle would render two
+ * different strings on two hosts. A literal table is the same twelve answers everywhere, for ever.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ */
+const SHORT_MONTHS = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+] as const
+
 /** `14 Mar 2026` UTC. */
 export function utcDate(iso: string | null | undefined): string | null {
   const at = instant(iso)
   if (at === null) return null
-  return at.toLocaleDateString('en-GB', {
-    timeZone: 'UTC',
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })
+  const day = at.getUTCDate().toString().padStart(2, '0')
+  return `${day} ${SHORT_MONTHS[at.getUTCMonth()]} ${at.getUTCFullYear()}`
 }
 
 /** `14 Mar 2026, 14:22 UTC` — the form a close time and a payout deadline are written in. */
